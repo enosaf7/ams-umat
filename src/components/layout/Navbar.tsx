@@ -11,13 +11,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -39,6 +39,30 @@ const Navbar = () => {
     { name: "News", path: "/news" },
     { name: "Contact", path: "/contact" },
   ];
+
+  // Add Admin link if user has admin role
+  if (profile?.role === 'admin') {
+    navLinks.push({ name: "Admin", path: "/admin" });
+  }
+
+  // Get user's display name
+  const getUserDisplayName = () => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name} ${profile.last_name}`;
+    }
+    return profile?.username || 'User';
+  };
+
+  // Get user's initials for avatar fallback
+  const getUserInitials = () => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name[0]}${profile.last_name[0]}`;
+    }
+    if (profile?.username) {
+      return profile.username[0].toUpperCase();
+    }
+    return "U";
+  };
 
   return (
     <nav
@@ -87,14 +111,18 @@ const Navbar = () => {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-umat-green text-white">
-                      {user.email?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
+                    {profile?.avatar_url ? (
+                      <AvatarImage src={profile.avatar_url} alt={getUserDisplayName()} />
+                    ) : (
+                      <AvatarFallback className="bg-umat-green text-white">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    )}
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>{getUserDisplayName()}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>Profile</DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignOut}>Log out</DropdownMenuItem>
@@ -164,7 +192,7 @@ const Navbar = () => {
             {user ? (
               <>
                 <div className="px-3 py-2 text-sm font-medium text-gray-500">
-                  Signed in as: {user.email}
+                  Signed in as: {getUserDisplayName()}
                 </div>
                 <button
                   onClick={handleSignOut}
