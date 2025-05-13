@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -364,7 +363,7 @@ const StudentLeadersManagement = () => {
 };
 
 const AdminDashboard = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -377,40 +376,23 @@ const AdminDashboard = () => {
         return;
       }
 
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        if (error) throw error;
-
-        if (data?.role !== 'admin') {
-          toast({
-            title: "Access denied",
-            description: "You don't have permission to access this page",
-            variant: "destructive",
-          });
-          navigate('/');
-          return;
-        }
-
-        setIsAdmin(true);
-      } catch (error: any) {
+      // Use the profile from context instead of querying again
+      if (profile?.role !== 'admin') {
         toast({
-          title: "Error",
-          description: error.message,
+          title: "Access denied",
+          description: "You don't have permission to access this page",
           variant: "destructive",
         });
         navigate('/');
-      } finally {
-        setLoading(false);
+        return;
       }
+
+      setIsAdmin(true);
+      setLoading(false);
     };
 
     checkAdminStatus();
-  }, [user, navigate, toast]);
+  }, [user, profile, navigate, toast]);
 
   if (loading) {
     return (

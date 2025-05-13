@@ -9,7 +9,7 @@ interface UserProfile {
   avatar_url: string | null;
   first_name: string | null;
   last_name: string | null;
-  role: string;
+  role: string | null;
 }
 
 interface AuthContextType {
@@ -42,7 +42,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
       
-      return data;
+      // Make sure we're returning a properly typed UserProfile
+      return data as UserProfile;
     } catch (error) {
       console.error('Unexpected error fetching profile:', error);
       return null;
@@ -70,7 +71,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Defer Supabase calls with setTimeout to avoid potential deadlocks
           setTimeout(async () => {
             const profileData = await fetchProfile(session.user.id);
-            setProfile(profileData);
+            if (profileData) {
+              setProfile(profileData);
+            }
           }, 0);
         } else {
           setProfile(null);
@@ -85,7 +88,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (session?.user) {
         const profileData = await fetchProfile(session.user.id);
-        setProfile(profileData);
+        if (profileData) {
+          setProfile(profileData);
+        }
       }
       
       setIsLoading(false);

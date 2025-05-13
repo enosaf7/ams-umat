@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -32,7 +31,7 @@ const LecturerDashboard = () => {
         return;
       }
 
-      // Check if user is a lecturer or admin
+      // Check if user is a lecturer or admin using profile from context
       if (profile?.role === 'lecturer' || profile?.role === 'admin') {
         setIsLecturer(true);
       } else {
