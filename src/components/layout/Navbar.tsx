@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import DepartmentLogo from "@/components/ui/DepartmentLogo";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -74,17 +74,7 @@ const Navbar = () => {
     >
       <div className="container mx-auto px-4 flex justify-between items-center">
         {/* Logo */}
-        <Link
-          to="/"
-          className={`flex items-center gap-2 text-2xl font-bold ${
-            isScrolled ? "text-umat-green" : "text-white"
-          }`}
-        >
-          <span className="bg-umat-yellow text-black px-2 py-1 rounded">
-            AMS
-          </span>
-          <span className={isScrolled ? "text-black" : "text-white"}>UMaT</span>
-        </Link>
+        <DepartmentLogo isScrolled={isScrolled} />
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-1">

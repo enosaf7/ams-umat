@@ -1,10 +1,16 @@
 
 import { Link } from 'react-router-dom';
+import DepartmentLogo from '@/components/ui/DepartmentLogo';
 
 const Footer = () => {
   return (
     <footer className="bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-center mb-8">
+          <DepartmentLogo size="lg" className="mb-4" />
+          <p className="text-lg italic text-umat-yellow">"AMS! - Eureka, AMS!! - I've found it, AMS!!! - The brain behind development"</p>
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <h3 className="text-lg font-semibold mb-4 text-umat-yellow">Quick Links</h3>
@@ -32,9 +38,6 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4 text-umat-yellow">About the Department</h3>
             <p className="mb-4">The Department of Mathematical Sciences at UMaT is committed to excellence in teaching, research, and service in mathematics and its applications.</p>
-            <div className="flex items-center">
-              <p className="italic text-umat-yellow">"AMS! - Eureka, AMS!! - I've found it, AMS!!! - The brain behind development"</p>
-            </div>
           </div>
         </div>
         
