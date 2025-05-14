@@ -58,7 +58,7 @@ const SettingsPanel = () => {
         setSiteSettings(data);
       } else {
         // This case should ideally be prevented by the ensure_default_site_settings SQL function
-        toast({ title: "No site settings found", description: "Using default settings. Save to create initial settings.", variant: "warning" });
+        toast({ title: "No site settings found", description: "Using default settings. Save to create initial settings.", variant: "default" });
         setSiteSettings({
           id: SITE_SETTINGS_ID,
           site_name: "UMaT Maths Dept - Default",
