@@ -1,29 +1,32 @@
 
 import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/use-toast"; // This import seems to be unused now.
 import { useAuth } from "@/contexts/AuthContext";
 import UserManagement from "./UserManagement";
 import NewsManagement from "./NewsManagement";
 import StudentLeadersManagement from "./StudentLeadersManagement";
-import ReportsDashboard from "./ReportsDashboard";
+// import ReportsDashboard from "./ReportsDashboard"; // Removed this import
 import SettingsPanel from "./SettingsPanel";
 
 const AdminDashboard = () => {
   const { user, profile } = useAuth();
-  const { toast } = useToast();
+  // const { toast } = useToast(); // toast was unused, removing.
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
       if (!user) {
+        // No need to set loading to false here if we return early.
+        // setLoading(false); 
         return;
       }
 
       if (profile?.role === 'admin') {
         setIsAdmin(true);
       }
+      // else { setIsAdmin(false); } // It's already false by default.
 
       setLoading(false);
     };
@@ -41,6 +44,8 @@ const AdminDashboard = () => {
   }
 
   if (!isAdmin) {
+    // Instead of returning null, perhaps show an access denied message or redirect,
+    // but for now, null is fine based on original logic.
     return null;
   }
 
@@ -53,7 +58,7 @@ const AdminDashboard = () => {
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="news">News & Announcements</TabsTrigger>
           <TabsTrigger value="student-leaders">Student Leaders</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
+          {/* <TabsTrigger value="reports">Reports</TabsTrigger> */} {/* Removed reports tab trigger */}
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
         
@@ -69,9 +74,11 @@ const AdminDashboard = () => {
           <StudentLeadersManagement />
         </TabsContent>
         
+        {/* Removed reports tab content
         <TabsContent value="reports">
           <ReportsDashboard />
-        </TabsContent>
+        </TabsContent> 
+        */}
         
         <TabsContent value="settings">
           <SettingsPanel />
