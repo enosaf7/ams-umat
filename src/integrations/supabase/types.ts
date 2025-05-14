@@ -114,6 +114,45 @@ export type Database = {
         }
         Relationships: []
       }
+      site_settings: {
+        Row: {
+          contact_email: string | null
+          created_at: string
+          enable_2fa: boolean | null
+          footer_text: string | null
+          id: string
+          maintenance_mode: boolean | null
+          registration_enabled: boolean | null
+          session_timeout_minutes: number | null
+          site_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string
+          enable_2fa?: boolean | null
+          footer_text?: string | null
+          id?: string
+          maintenance_mode?: boolean | null
+          registration_enabled?: boolean | null
+          session_timeout_minutes?: number | null
+          site_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string
+          enable_2fa?: boolean | null
+          footer_text?: string | null
+          id?: string
+          maintenance_mode?: boolean | null
+          registration_enabled?: boolean | null
+          session_timeout_minutes?: number | null
+          site_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       student_leaders: {
         Row: {
           academic_year: string
@@ -155,7 +194,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      ensure_default_site_settings: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
