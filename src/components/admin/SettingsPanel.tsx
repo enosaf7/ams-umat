@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext"; // Keep if needed for other parts, though not directly for settings fetch/save logic as RLS handles it.
+import { useAuth } from "@/contexts/AuthContext"; 
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Tables } from "@/integrations/supabase/types"; // Import Tables type
+import { Tables } from "@/integrations/supabase/types";
+import { useSettings } from "@/contexts/SettingsContext"; // Import useSettings
 
 // Define the specific type for site settings row for clarity
 type SiteSettingsData = Tables<'site_settings'>;
@@ -19,6 +20,7 @@ const SITE_SETTINGS_ID = '00000000-0000-0000-0000-000000000001';
 
 const SettingsPanel = () => {
   const { toast } = useToast();
+  const { refreshSettings } = useSettings(); // Consume refreshSettings from context
   
   const [siteSettings, setSiteSettings] = useState<SiteSettingsData | null>(null);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
@@ -31,7 +33,7 @@ const SettingsPanel = () => {
   });
 
   useEffect(() => {
-    const fetchSiteSettings = async () => {
+    const fetchLocalSiteSettings = async () => { // Renamed to avoid conflict if context also had fetchSiteSettings
       setIsLoadingSettings(true);
       const { data, error } = await supabase
         .from('site_settings')
@@ -57,7 +59,6 @@ const SettingsPanel = () => {
       } else if (data) {
         setSiteSettings(data);
       } else {
-        // This case should ideally be prevented by the ensure_default_site_settings SQL function
         toast({ title: "No site settings found", description: "Using default settings. Save to create initial settings.", variant: "default" });
         setSiteSettings({
           id: SITE_SETTINGS_ID,
@@ -74,12 +75,17 @@ const SettingsPanel = () => {
       }
       setIsLoadingSettings(false);
     };
-    fetchSiteSettings();
+    fetchLocalSiteSettings();
   }, [toast]);
   
   const handleSiteSettingChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setSiteSettings(prev => prev ? ({ ...prev, [name]: value }) : null);
+    // For numeric inputs that should be numbers in state, parse them
+    if (name === "session_timeout_minutes") {
+      setSiteSettings(prev => prev ? ({ ...prev, [name]: parseInt(value, 10) }) : null);
+    } else {
+      setSiteSettings(prev => prev ? ({ ...prev, [name]: value }) : null);
+    }
   };
   
   const handleToggleChange = (name: keyof SiteSettingsData, checked: boolean) => {
@@ -96,7 +102,6 @@ const SettingsPanel = () => {
       return;
     }
 
-    // Prepare data for update, excluding id, created_at. updated_at will be set.
     const { id, created_at, ...updateData } = siteSettings;
 
     const numericTimeout = Number(updateData.session_timeout_minutes);
@@ -107,7 +112,7 @@ const SettingsPanel = () => {
     
     const payload: Omit<SiteSettingsData, 'id' | 'created_at'> = {
       ...updateData,
-      session_timeout_minutes: numericTimeout,
+      session_timeout_minutes: numericTimeout, // Ensure it's a number
       updated_at: new Date().toISOString(),
     };
 
@@ -120,10 +125,7 @@ const SettingsPanel = () => {
       toast({ title: "Error saving settings", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Settings saved", description: "Your settings have been saved successfully." });
-      // Optionally re-fetch or just trust the local state is in sync if no complex backend logic modifies it
-      // For robustness, one might re-fetch:
-      // const { data: updatedData } = await supabase.from('site_settings').select('*').eq('id', SITE_SETTINGS_ID).single();
-      // if (updatedData) setSiteSettings(updatedData);
+      await refreshSettings(); // Refresh global settings after successful save
     }
   };
   
@@ -146,6 +148,10 @@ const SettingsPanel = () => {
       });
       return;
     }
+    
+    // supabase.auth.updateUser does not require currentPassword for password change.
+    // If you intend to verify currentPassword, it needs custom logic BEFORE calling updateUser.
+    // For simplicity, this example directly updates to newPassword if user is authenticated.
     
     try {
       const { error } = await supabase.auth.updateUser({ 
@@ -173,7 +179,7 @@ const SettingsPanel = () => {
     }
   };
 
-  if (isLoadingSettings) {
+  if (isLoadingSettings || !siteSettings) { // Added !siteSettings for safety
     return (
       <div className="space-y-6">
         <h2 className="text-xl font-bold">Settings</h2>
@@ -208,7 +214,7 @@ const SettingsPanel = () => {
                 <Input
                   id="site_name"
                   name="site_name"
-                  value={siteSettings?.site_name ?? ''}
+                  value={siteSettings.site_name ?? ''}
                   onChange={handleSiteSettingChange}
                   disabled={isLoadingSettings}
                 />
@@ -220,7 +226,7 @@ const SettingsPanel = () => {
                   id="contact_email"
                   name="contact_email"
                   type="email"
-                  value={siteSettings?.contact_email ?? ''}
+                  value={siteSettings.contact_email ?? ''}
                   onChange={handleSiteSettingChange}
                   disabled={isLoadingSettings}
                 />
@@ -231,7 +237,7 @@ const SettingsPanel = () => {
                 <Textarea
                   id="footer_text"
                   name="footer_text"
-                  value={siteSettings?.footer_text ?? ''}
+                  value={siteSettings.footer_text ?? ''}
                   onChange={handleSiteSettingChange}
                   rows={2}
                   disabled={isLoadingSettings}
@@ -240,14 +246,14 @@ const SettingsPanel = () => {
               
               <div className="flex justify-between items-center">
                 <div className="space-y-0.5">
-                  <Label htmlFor="maintenance_mode">Maintenance Mode</Label>
-                  <p className="text-sm text-gray-500">
+                  <Label htmlFor="maintenance_mode" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Maintenance Mode</Label>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     Temporarily disable the site for maintenance
                   </p>
                 </div>
                 <Switch
                   id="maintenance_mode" 
-                  checked={siteSettings?.maintenance_mode ?? false}
+                  checked={siteSettings.maintenance_mode ?? false}
                   onCheckedChange={(checked) => handleToggleChange('maintenance_mode', checked)}
                   disabled={isLoadingSettings}
                 />
@@ -255,14 +261,14 @@ const SettingsPanel = () => {
               
               <div className="flex justify-between items-center">
                 <div className="space-y-0.5">
-                  <Label htmlFor="registration_enabled">Enable User Registration</Label>
-                  <p className="text-sm text-gray-500">
+                  <Label htmlFor="registration_enabled" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Enable User Registration</Label>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     Allow new users to register on the site
                   </p>
                 </div>
                 <Switch
                   id="registration_enabled" 
-                  checked={siteSettings?.registration_enabled ?? false}
+                  checked={siteSettings.registration_enabled ?? false}
                   onCheckedChange={(checked) => handleToggleChange('registration_enabled', checked)}
                   disabled={isLoadingSettings}
                 />
@@ -292,6 +298,8 @@ const SettingsPanel = () => {
                     value={passwordForm.currentPassword}
                     onChange={handlePasswordChange}
                     required
+                    disabled // Current password check not implemented with Supabase default updateUser
+                    placeholder="Not required for this operation"
                   />
                 </div>
                 
@@ -334,32 +342,32 @@ const SettingsPanel = () => {
             <CardContent className="space-y-6">
               <div className="flex justify-between items-center">
                 <div className="space-y-0.5">
-                  <Label htmlFor="enable_2fa">Two-Factor Authentication</Label>
-                  <p className="text-sm text-gray-500">
-                    Enable/Disable 2FA for admin accounts (Feature status shown)
+                  <Label htmlFor="enable_2fa" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Two-Factor Authentication</Label>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Enable/Disable 2FA (Feature status shown)
                   </p>
                 </div>
                 <Switch
                   id="enable_2fa"
-                  checked={siteSettings?.enable_2fa ?? false}
+                  checked={siteSettings.enable_2fa ?? false}
                   onCheckedChange={(checked) => handleToggleChange('enable_2fa', checked)}
                   disabled={isLoadingSettings}
                 />
               </div>
               
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center space-y-2 sm:space-y-0">
                 <div className="space-y-0.5">
-                  <Label htmlFor="session_timeout_minutes">Session Timeout (minutes)</Label>
-                  <p className="text-sm text-gray-500">
+                  <Label htmlFor="session_timeout_minutes" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Session Timeout (minutes)</Label>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     Automatically log out inactive users
                   </p>
                 </div>
                 <select 
                   id="session_timeout_minutes"
                   name="session_timeout_minutes"
-                  value={siteSettings?.session_timeout_minutes ?? 30}
+                  value={siteSettings.session_timeout_minutes ?? 30}
                   onChange={handleSiteSettingChange}
-                  className="border rounded p-1 text-sm"
+                  className="border rounded p-2 text-sm bg-input text-foreground focus:ring-ring focus:border-ring w-full sm:w-auto"
                   disabled={isLoadingSettings}
                 >
                   <option value="15">15 minutes</option>
@@ -381,24 +389,24 @@ const SettingsPanel = () => {
           <Card>
             <CardHeader>
               <CardTitle>Database Backup</CardTitle>
-              <CardDescription>Export your site data</CardDescription>
+              <CardDescription>Export your site data (Placeholder)</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <p className="text-sm text-gray-700">
-                Create a backup of your site's data. This includes all user profiles, news articles, and student leader information.
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                Create a backup of your site's data. This section is a placeholder for future backup functionality.
               </p>
               
               <div className="flex flex-col space-y-4">
-                <Button variant="outline" className="justify-start">
+                <Button variant="outline" className="justify-start" disabled>
                   Export Users Data (CSV)
                 </Button>
-                <Button variant="outline" className="justify-start">
+                <Button variant="outline" className="justify-start" disabled>
                   Export News & Announcements (CSV)
                 </Button>
-                <Button variant="outline" className="justify-start">
+                <Button variant="outline" className="justify-start" disabled>
                   Export Student Leaders Data (CSV)
                 </Button>
-                <Button className="justify-start">
+                <Button className="justify-start" disabled>
                   Full Database Backup
                 </Button>
               </div>
