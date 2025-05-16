@@ -39,6 +39,14 @@ const Hero = () => {
               "AMS! - Eureka, AMS!! - I've found it, AMS!!! - The brain behind development"
             </p>
           </div>
+          {/* Favicon image on the right */}
+        <img
+          src="/favicon.png"
+          alt="Favicon"
+          className="h-32 w-32 object-contain ml-8 hidden md:block"
+          style={{ alignSelf: 'flex-start' }}
+        />
+      </div>
         </div>
       </div>
     </div>
