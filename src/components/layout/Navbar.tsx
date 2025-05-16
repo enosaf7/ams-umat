@@ -122,7 +122,7 @@ const Navbar = () => {
             <Link to="/auth">
               <Button 
                 variant={isScrolled ? "default" : "outline"} 
-                className={isScrolled ? "bg-umat-green hover:bg-umat-green/90" : "border-white text-white hover:bg-white/20"}
+                className={isScrolled ? "bg-umat-green hover:bg-umat-green/90" : "border-white text-black hover:bg-white/20"}
               >
                 Sign In
               </Button>
