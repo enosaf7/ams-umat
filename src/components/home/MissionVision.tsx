@@ -52,7 +52,7 @@ const MissionVision = () => {
               <Search className="w-10 h-10 text-umat-green mb-4" />
               <h3 className="font-bold text-lg mb-2">Innovation</h3>
               <p className="text-gray-600">Applying mathematics to develop innovative solutions</p>
-              <p className="text-gray-600">The department is always represented by <a href ="https://smart-i.netlify.app/">smart-i</a> at the career and innovations fair</p>
+              <p className="text-gray-600">The department is always represented by <a href ="https://smart-i.netlify.app/" style={{ color: "#1e90ff", fontWeight: "bold", textDecoration: "underline" }}>smart-i</a> at the career and innovations fair</p>
             </div>
             
             <div className="math-card">
