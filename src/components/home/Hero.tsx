@@ -34,9 +34,11 @@ const Hero = () => {
             </Button>
           </div>
           <div className="mt-16">
-            <p className="text-lg font-semibold text-umat-yellow italic">
-              "AMS! - Eureka, AMS!! - I've found it, MATHEMATICS!!! - The brain behind development"
-            </p>
+            <div className="text-lg font-semibold text-umat-yellow italic flex flex-col items-start">
+              <span>AMS! - Eureka,</span>
+              <span>AMS!! - I've found it,</span>
+              <span>MATHEMATICS!!! - The brain behind development</span>
+            </div>
           </div>
         </div>
       </div>
