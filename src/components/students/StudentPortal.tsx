@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import StudentLeaders from "./StudentLeaders";
+import { WalletCards } from "lucide-react";
 
 const StudentPortal = () => {
   const { user } = useAuth();
@@ -12,6 +13,16 @@ const StudentPortal = () => {
   return (
     <div className="container py-10">
       <h1 className="text-4xl font-bold text-center mb-10">Student Resources</h1>
+      
+      {/* Payment button at the top */}
+      <div className="mb-8 flex justify-center">
+        <Button asChild className="bg-umat-green hover:bg-umat-green/90 flex items-center gap-2">
+          <Link to="/student-payment">
+            <WalletCards className="h-5 w-5" />
+            Make a Payment
+          </Link>
+        </Button>
+      </div>
       
       {!user ? (
         <div className="text-center p-8 bg-gray-50 rounded-lg shadow-sm">

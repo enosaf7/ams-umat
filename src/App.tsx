@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +11,7 @@ import Index from "./pages/Index";
 import About from "./pages/About";
 import Lecturers from "./pages/Lecturers";
 import Students from "./pages/Students";
+import StudentPayment from "./pages/StudentPayment"; // Import the new page
 import News from "./pages/News";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
@@ -58,6 +60,7 @@ const AppRoutes = () => {
       <Route path="/about" element={<About />} />
       <Route path="/lecturers" element={<Lecturers />} />
       <Route path="/students" element={<Students />} />
+      <Route path="/student-payment" element={<StudentPayment />} /> {/* Add new route */}
       <Route path="/news" element={<News />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/auth" element={<Auth />} />
