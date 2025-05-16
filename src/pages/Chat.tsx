@@ -80,24 +80,17 @@ const Chat = () => {
   const fetchMessages = async (contactId: string) => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .select(`
-          id,
-          sender_id,
-          receiver_id,
-          content,
-          created_at,
-          sender:profiles!sender_id(first_name, last_name, avatar_url)
-        `)
-        .or(`and(sender_id.eq.${user?.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${user?.id})`)
-        .order('created_at', { ascending: true });
+      // Use the REST API directly since we don't have types for chat_messages yet
+      const { data, error } = await supabase.rpc('get_chat_messages', {
+        p_contact_id: contactId
+      });
 
       if (error) {
         throw error;
       }
 
-      setMessages(data || []);
+      // Type assertion since we know the data structure
+      setMessages((data as unknown) as ChatMessage[] || []);
     } catch (error) {
       console.error('Error fetching messages:', error);
       toast({
@@ -146,18 +139,14 @@ const Chat = () => {
   };
 
   const sendMessage = async (content: string) => {
-    if (!selectedContact || !content.trim()) return;
+    if (!selectedContact || !content.trim() || !user?.id) return;
 
     try {
-      const newMessage = {
-        sender_id: user?.id,
-        receiver_id: selectedContact.id,
-        content: content.trim(),
-      };
-
-      const { error } = await supabase
-        .from('chat_messages')
-        .insert(newMessage);
+      // Use the REST API directly since we don't have types for chat_messages yet
+      const { error } = await supabase.rpc('send_chat_message', {
+        p_receiver_id: selectedContact.id,
+        p_content: content.trim()
+      });
 
       if (error) {
         throw error;
