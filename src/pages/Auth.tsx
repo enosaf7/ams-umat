@@ -15,6 +15,8 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [indexNumber, setIndexNumber] = useState("");
+  const [classValue, setClassValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
@@ -76,6 +78,8 @@ const Auth = () => {
       const updates = {
         first_name: firstName,
         last_name: lastName,
+        index_number: indexNumber,
+        class: classValue,
         ...(avatarUrl && { avatar_url: avatarUrl })
       };
       
@@ -104,6 +108,8 @@ const Auth = () => {
             data: {
               first_name: firstName,
               last_name: lastName,
+              index_number: indexNumber,
+              class: classValue
             }
           }
         });
@@ -239,6 +245,32 @@ const Auth = () => {
                     placeholder="Doe"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="index-number" className="text-sm font-medium">
+                  Index Number
+                </label>
+                <Input
+                  id="index-number"
+                  type="text"
+                  value={indexNumber}
+                  onChange={(e) => setIndexNumber(e.target.value)}
+                  placeholder="e.g., MA-EAOSAFO2522"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="class" className="text-sm font-medium">
+                  Class
+                </label>
+                <Input
+                  id="class"
+                  type="text"
+                  value={classValue}
+                  onChange={(e) => setClassValue(e.target.value)}
+                  placeholder="e.g., BSc Mathematics, Level 300"
+                />
               </div>
 
               <div className="space-y-2">

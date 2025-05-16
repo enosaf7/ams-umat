@@ -23,6 +23,8 @@ type User = {
   role: string | null;
   avatar_url: string | null;
   created_at: string;
+  index_number: string | null;
+  class: string | null;
 };
 
 const UserManagement = () => {
@@ -87,10 +89,14 @@ const UserManagement = () => {
   const filteredUsers = users.filter((user) => {
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
     const email = user.username?.toLowerCase() || '';
+    const indexNum = user.index_number?.toLowerCase() || '';
+    const userClass = user.class?.toLowerCase() || '';
     const searchLower = searchTerm.toLowerCase();
     
     return fullName.includes(searchLower) || 
            email.includes(searchLower) || 
+           indexNum.includes(searchLower) ||
+           userClass.includes(searchLower) ||
            (user.role?.toLowerCase() || '').includes(searchLower);
   });
 
@@ -123,6 +129,8 @@ const UserManagement = () => {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Index Number</TableHead>
+                <TableHead>Class</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -137,6 +145,8 @@ const UserManagement = () => {
                         : 'No name provided'}
                     </TableCell>
                     <TableCell>{user.username}</TableCell>
+                    <TableCell>{user.index_number || 'Not specified'}</TableCell>
+                    <TableCell>{user.class || 'Not specified'}</TableCell>
                     <TableCell>
                       <span className={`inline-block px-2 py-1 rounded-md text-xs font-medium
                         ${user.role === 'admin' ? 'bg-red-100 text-red-800' : 
@@ -164,7 +174,7 @@ const UserManagement = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center">
                     No users found.
                   </TableCell>
                 </TableRow>
