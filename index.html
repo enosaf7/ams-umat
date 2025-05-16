@@ -15,6 +15,19 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+     /* Hide the Lovable badge */
+      .lovable-badge, 
+      #lovable-badge,
+      [id*="lovable-badge"],
+      [class*="lovable-badge"],
+      [id*="lv-badge"],
+      [class*="lv-badge"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+    </style>
   </head>
 
   <body>
