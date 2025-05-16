@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
@@ -39,7 +38,6 @@ const Hero = () => {
               "AMS! - Eureka, AMS!! - I've found it, MATHEMATICS!!! - The brain behind development"
             </p>
           </div>
-      </div>
         </div>
       </div>
     </div>
