@@ -17,7 +17,7 @@ const Features = () => {
                   </svg>
                 </div>
               </div>
-              <h3 className="text-xl font-bold mb-3 group-hover:text-umat-green">Lecturer Portal</h3>
+              <h3 className="text-xl font-bold mb-3 group-hover:text-umat-green">Lecturer's Portal</h3>
               <p className="text-gray-600 mb-4 flex-grow">Access tools for uploading lecture materials, managing assignments, and tracking student progress.</p>
               <span className="text-umat-green font-semibold inline-flex items-center group-hover:translate-x-2 transition-transform duration-300">
                 Learn More
