@@ -5,19 +5,20 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { SettingsProvider, useSettings } from "@/contexts/SettingsContext"; // Import SettingsProvider and useSettings
+import { SettingsProvider, useSettings } from "@/contexts/SettingsContext"; 
 
 import Index from "./pages/Index";
 import About from "./pages/About";
 import Lecturers from "./pages/Lecturers";
 import Students from "./pages/Students";
-import StudentPayment from "./pages/StudentPayment"; // Import the new page
+import StudentPayment from "./pages/StudentPayment"; 
 import News from "./pages/News";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
-import MaintenancePage from "./pages/MaintenancePage"; // Import MaintenancePage
+import Chat from "./pages/Chat"; // Import the new Chat component
+import MaintenancePage from "./pages/MaintenancePage"; 
 
 const queryClient = new QueryClient();
 
@@ -38,33 +39,27 @@ const AppRoutes = () => {
   const isGuestAccessibleDuringMaintenance = GUEST_ACCESSIBLE_PATHS_DURING_MAINTENANCE.some(path => location.pathname.startsWith(path));
 
   if (siteSettings?.maintenance_mode && !isGuestAccessibleDuringMaintenance) {
-    // In maintenance mode, show MaintenancePage for all non-exempted routes
-    // Exempted routes like /admin and /auth will still try to render their components.
-    // We need to ensure that if someone lands on /admin or /auth, they see that,
-    // otherwise they see MaintenancePage.
     return (
         <Routes>
-            {/* Ensure admin and auth routes are still processed by their components if directly navigated to */}
             <Route path="/admin/*" element={<Admin />} /> 
             <Route path="/auth" element={<Auth />} />
-            {/* All other paths go to MaintenancePage */}
             <Route path="*" element={<MaintenancePage />} />
         </Routes>
     );
   }
 
-  // Regular routes when not in maintenance mode or on an exempted path
   return (
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/about" element={<About />} />
       <Route path="/lecturers" element={<Lecturers />} />
       <Route path="/students" element={<Students />} />
-      <Route path="/student-payment" element={<StudentPayment />} /> {/* Add new route */}
+      <Route path="/student-payment" element={<StudentPayment />} />
       <Route path="/news" element={<News />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/admin" element={<Admin />} />
+      <Route path="/chat" element={<Chat />} /> {/* Add the Chat route */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -73,11 +68,11 @@ const AppRoutes = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <SettingsProvider> {/* SettingsProvider wraps components that need settings */}
+      <SettingsProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter> {/* BrowserRouter must wrap AppRoutes for useLocation to work */}
+          <BrowserRouter>
             <AppRoutes />
           </BrowserRouter>
         </TooltipProvider>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import DepartmentLogo from "@/components/ui/DepartmentLogo";
+import { MessageSquare } from "lucide-react";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -115,6 +117,12 @@ const Navbar = () => {
                 <DropdownMenuLabel>{getUserDisplayName()}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>Profile</DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/chat" className="flex items-center gap-2 cursor-pointer">
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Chat</span>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignOut}>Log out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -184,6 +192,14 @@ const Navbar = () => {
                 <div className="px-3 py-2 text-sm font-medium text-gray-500">
                   Signed in as: {getUserDisplayName()}
                 </div>
+                <Link
+                  to="/chat"
+                  className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Chat</span>
+                </Link>
                 <button
                   onClick={handleSignOut}
                   className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-500 hover:bg-red-50"
