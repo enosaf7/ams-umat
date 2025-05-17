@@ -80,9 +80,10 @@ const Chat = () => {
   const fetchMessages = async (contactId: string) => {
     try {
       setLoading(true);
-      // Use the REST API directly since we don't have types for chat_messages yet
-      const { data, error } = await supabase.rpc('get_chat_messages', {
-        p_contact_id: contactId
+      
+      // Use Supabase's Edge Function instead of RPC
+      const { data, error } = await supabase.functions.invoke('get_chat_messages', {
+        body: { p_contact_id: contactId }
       });
 
       if (error) {
@@ -90,7 +91,7 @@ const Chat = () => {
       }
 
       // Type assertion since we know the data structure
-      setMessages((data as unknown) as ChatMessage[] || []);
+      setMessages(data as ChatMessage[] || []);
     } catch (error) {
       console.error('Error fetching messages:', error);
       toast({
@@ -142,10 +143,12 @@ const Chat = () => {
     if (!selectedContact || !content.trim() || !user?.id) return;
 
     try {
-      // Use the REST API directly since we don't have types for chat_messages yet
-      const { error } = await supabase.rpc('send_chat_message', {
-        p_receiver_id: selectedContact.id,
-        p_content: content.trim()
+      // Use Supabase's Edge Function instead of RPC
+      const { error } = await supabase.functions.invoke('send_chat_message', {
+        body: {
+          p_receiver_id: selectedContact.id,
+          p_content: content.trim()
+        }
       });
 
       if (error) {
