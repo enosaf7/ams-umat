@@ -3,7 +3,7 @@
 // which is used by Supabase Edge Functions
 
 declare namespace Deno {
-  export function env: {
+  export const env: {
     get(key: string): string | undefined;
   };
 }

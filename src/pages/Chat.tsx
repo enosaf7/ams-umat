@@ -81,8 +81,7 @@ const Chat = () => {
     try {
       setLoading(true);
       
-      // Use Supabase's Edge Function instead of RPC
-      const { data, error } = await supabase.functions.invoke('get_chat_messages', {
+      const { data, error } = await supabase.functions.invoke("get_chat_messages", {
         body: { p_contact_id: contactId }
       });
 
@@ -90,8 +89,7 @@ const Chat = () => {
         throw error;
       }
 
-      // Type assertion since we know the data structure
-      setMessages(data as ChatMessage[] || []);
+      setMessages(data || []);
     } catch (error) {
       console.error('Error fetching messages:', error);
       toast({
@@ -143,8 +141,7 @@ const Chat = () => {
     if (!selectedContact || !content.trim() || !user?.id) return;
 
     try {
-      // Use Supabase's Edge Function instead of RPC
-      const { error } = await supabase.functions.invoke('send_chat_message', {
+      const { data, error } = await supabase.functions.invoke("send_chat_message", {
         body: {
           p_receiver_id: selectedContact.id,
           p_content: content.trim()
