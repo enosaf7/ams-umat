@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,7 +41,11 @@ const Chat = () => {
   useEffect(() => {
     if (user) {
       fetchContacts();
-      subscribeToMessages();
+      const channel = setupRealtimeSubscription();
+      
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [user]);
 
@@ -51,6 +54,40 @@ const Chat = () => {
       fetchMessages(selectedContact.id);
     }
   }, [selectedContact]);
+
+  const setupRealtimeSubscription = () => {
+    return supabase
+      .channel('chat_messages_channel')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+        },
+        (payload) => {
+          const newMessage = payload.new as ChatMessage;
+          
+          // Check if the message is related to the current user
+          if (newMessage.sender_id === user?.id || newMessage.receiver_id === user?.id) {
+            // If we're in a conversation with this person, update the messages
+            if (selectedContact && 
+                (newMessage.sender_id === selectedContact.id || newMessage.receiver_id === selectedContact.id)) {
+              fetchMessages(selectedContact.id);
+            } else {
+              // Otherwise notify about the new message
+              toast({
+                title: "New Message",
+                description: "You received a new message",
+              });
+              // Refresh contacts to show latest message
+              fetchContacts();
+            }
+          }
+        }
+      )
+      .subscribe();
+  };
 
   const fetchContacts = async () => {
     try {
@@ -64,7 +101,25 @@ const Chat = () => {
         throw error;
       }
 
-      setContacts(data || []);
+      // Get the last message for each contact to display in the sidebar
+      const contactsWithLastMessage = await Promise.all((data || []).map(async (contact) => {
+        const { data: messageData } = await supabase
+          .from('chat_messages')
+          .select('content, created_at')
+          .or(`and(sender_id.eq.${user?.id},receiver_id.eq.${contact.id}),and(sender_id.eq.${contact.id},receiver_id.eq.${user?.id})`)
+          .order('created_at', { ascending: false })
+          .limit(1);
+          
+        const lastMessage = messageData && messageData.length > 0 ? messageData[0] : null;
+        
+        return {
+          ...contact,
+          last_message: lastMessage?.content || undefined,
+          last_message_time: lastMessage?.created_at || undefined
+        };
+      }));
+
+      setContacts(contactsWithLastMessage || []);
     } catch (error) {
       console.error('Error fetching contacts:', error);
       toast({
@@ -81,15 +136,33 @@ const Chat = () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase.functions.invoke("get_chat_messages", {
-        body: { p_contact_id: contactId }
-      });
+      // Direct database query instead of using Edge Function
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select(`
+          id,
+          sender_id,
+          receiver_id,
+          content,
+          created_at,
+          sender:profiles!sender_id(first_name, last_name, avatar_url)
+        `)
+        .or(`and(sender_id.eq.${user?.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${user?.id})`)
+        .order('created_at', { ascending: true });
 
       if (error) {
         throw error;
       }
 
       setMessages(data || []);
+      
+      // Mark received messages as read
+      await supabase
+        .from('chat_messages')
+        .update({ read: true })
+        .eq('receiver_id', user?.id)
+        .eq('sender_id', contactId);
+        
     } catch (error) {
       console.error('Error fetching messages:', error);
       toast({
@@ -102,58 +175,25 @@ const Chat = () => {
     }
   };
 
-  const subscribeToMessages = () => {
-    const channel = supabase
-      .channel('chat_messages_channel')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `receiver_id=eq.${user?.id}`,
-        },
-        (payload) => {
-          const newMessage = payload.new as ChatMessage;
-          
-          // Only update messages if we're currently viewing the conversation with this sender
-          if (selectedContact && newMessage.sender_id === selectedContact.id) {
-            fetchMessages(selectedContact.id);
-          } else {
-            // Notify about new message from someone else
-            toast({
-              title: "New Message",
-              description: "You received a new message",
-            });
-            // Refresh contacts to show latest message
-            fetchContacts();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
-
   const sendMessage = async (content: string) => {
     if (!selectedContact || !content.trim() || !user?.id) return;
 
     try {
-      const { data, error } = await supabase.functions.invoke("send_chat_message", {
-        body: {
-          p_receiver_id: selectedContact.id,
-          p_content: content.trim()
-        }
-      });
+      // Direct database insert instead of using Edge Function
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .insert({
+          sender_id: user.id,
+          receiver_id: selectedContact.id,
+          content: content.trim()
+        })
+        .select();
 
       if (error) {
         throw error;
       }
 
-      // Refresh messages
-      fetchMessages(selectedContact.id);
+      // No need to refresh messages here as the realtime subscription will handle it
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
