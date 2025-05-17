@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -136,25 +137,49 @@ const Chat = () => {
     try {
       setLoading(true);
       
-      // Direct database query instead of using Edge Function
-      const { data, error } = await supabase
+      // 1. Fetch messages without joining
+      const { data: messagesData, error: messagesError } = await supabase
         .from('chat_messages')
-        .select(`
-          id,
-          sender_id,
-          receiver_id,
-          content,
-          created_at,
-          sender:profiles!sender_id(first_name, last_name, avatar_url)
-        `)
+        .select('id, sender_id, receiver_id, content, created_at')
         .or(`and(sender_id.eq.${user?.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${user?.id})`)
         .order('created_at', { ascending: true });
 
-      if (error) {
-        throw error;
+      if (messagesError) {
+        throw messagesError;
       }
 
-      setMessages(data || []);
+      // 2. Fetch all unique sender profiles in one go
+      const senderIds = Array.from(new Set(messagesData.map(msg => msg.sender_id)));
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, avatar_url')
+        .in('id', senderIds);
+
+      if (profilesError) {
+        throw profilesError;
+      }
+
+      // 3. Create a map for quick profile lookup
+      const profilesMap = new Map();
+      profilesData.forEach(profile => {
+        profilesMap.set(profile.id, {
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          avatar_url: profile.avatar_url
+        });
+      });
+
+      // 4. Join the data manually
+      const enrichedMessages: ChatMessage[] = messagesData.map(message => ({
+        ...message,
+        sender: profilesMap.get(message.sender_id) || {
+          first_name: null,
+          last_name: null,
+          avatar_url: null
+        }
+      }));
+
+      setMessages(enrichedMessages);
       
       // Mark received messages as read
       await supabase
