@@ -149,7 +149,14 @@ const Chat = () => {
         .order('created_at', { ascending: true });
 
       if (messagesError) {
-        throw messagesError;
+        console.error('Error fetching messages:', messagesError);
+        toast({
+          title: "Error",
+          description: "Failed to load messages. Please try again.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
       }
 
       // 2. Fetch all unique sender profiles in one go
@@ -160,7 +167,14 @@ const Chat = () => {
         .in('id', senderIds);
 
       if (profilesError) {
-        throw profilesError;
+        console.error('Error fetching profiles:', profilesError);
+        toast({
+          title: "Error",
+          description: "Failed to load user profiles. Please try again.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
       }
 
       // 3. Create a map for quick profile lookup

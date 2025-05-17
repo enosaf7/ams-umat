@@ -1,9 +1,10 @@
+
 import { useRef, useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { SendHorizonal, Paperclip, X, FileImage, FileVideo, FilePdf, FileText, FileAudio, FileArchive } from "lucide-react";
+import { SendHorizonal, Paperclip, X, FileImage, FileVideo, FileText, FileAudio, FileArchive } from "lucide-react";
 import { format } from "date-fns";
 import { ChatContact, ChatMessage } from "@/pages/Chat";
 import { Progress } from "@/components/ui/progress";
@@ -77,7 +78,7 @@ const ChatWindow = ({
     } else if (fileType.startsWith("video/")) {
       return <FileVideo className="h-6 w-6" />;
     } else if (fileType === "application/pdf") {
-      return <FileText className="h-6 w-6" />;
+      return <FileText className="h-6 w-6" />; // Using FileText instead of FilePdf
     } else if (fileType.includes("audio/")) {
       return <FileAudio className="h-6 w-6" />;
     } else if (fileType.includes("application/zip") || fileType.includes("application/x-rar")) {
