@@ -24,6 +24,10 @@ export type ChatMessage = {
   receiver_id: string;
   content: string;
   created_at: string;
+  file_url?: string | null;
+  file_name?: string | null;
+  file_type?: string | null;
+  file_size?: number | null;
   sender?: {
     first_name: string | null;
     last_name: string | null;
@@ -140,7 +144,7 @@ const Chat = () => {
       // 1. Fetch messages without joining
       const { data: messagesData, error: messagesError } = await supabase
         .from('chat_messages')
-        .select('id, sender_id, receiver_id, content, created_at')
+        .select('id, sender_id, receiver_id, content, created_at, file_url, file_name, file_type, file_size')
         .or(`and(sender_id.eq.${user?.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${user?.id})`)
         .order('created_at', { ascending: true });
 
@@ -200,17 +204,68 @@ const Chat = () => {
     }
   };
 
-  const sendMessage = async (content: string) => {
-    if (!selectedContact || !content.trim() || !user?.id) return;
+  const sendMessage = async (content: string, file?: File) => {
+    if (!selectedContact || (!content.trim() && !file) || !user?.id) return;
 
     try {
-      // Direct database insert instead of using Edge Function
+      let fileUrl = null;
+      let fileName = null;
+      let fileType = null;
+      let fileSize = null;
+
+      // Handle file upload if a file is selected
+      if (file) {
+        const fileExt = file.name.split('.').pop();
+        const filePath = `${user.id}/${Date.now()}-${file.name}`;
+        
+        // Create the chat_files bucket if it doesn't exist
+        const { data: bucketData, error: bucketError } = await supabase
+          .storage
+          .getBucket('chat_files');
+          
+        if (bucketError && bucketError.message.includes('not found')) {
+          await supabase.storage.createBucket('chat_files', {
+            public: true,
+            fileSizeLimit: 100 * 1024 * 1024 // 100MB limit
+          });
+        }
+        
+        // Upload the file
+        const { data, error } = await supabase
+          .storage
+          .from('chat_files')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (error) {
+          throw error;
+        }
+
+        // Get the public URL
+        const { data: publicURLData } = supabase
+          .storage
+          .from('chat_files')
+          .getPublicUrl(filePath);
+
+        fileUrl = publicURLData.publicUrl;
+        fileName = file.name;
+        fileType = file.type;
+        fileSize = file.size;
+      }
+
+      // Insert the message with or without file
       const { data, error } = await supabase
         .from('chat_messages')
         .insert({
           sender_id: user.id,
           receiver_id: selectedContact.id,
-          content: content.trim()
+          content: content.trim(),
+          file_url: fileUrl,
+          file_name: fileName,
+          file_type: fileType,
+          file_size: fileSize
         })
         .select();
 
