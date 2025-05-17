@@ -228,7 +228,6 @@ const Auth = () => {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     required
-                    placeholder="John"
                   />
                 </div>
 
@@ -242,7 +241,6 @@ const Auth = () => {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     required
-                    placeholder="Doe"
                   />
                 </div>
               </div>
@@ -256,7 +254,6 @@ const Auth = () => {
                   type="text"
                   value={indexNumber}
                   onChange={(e) => setIndexNumber(e.target.value)}
-                  placeholder="e.g., MA-EAOSAFO2522"
                 />
               </div>
 
@@ -269,7 +266,7 @@ const Auth = () => {
                   type="text"
                   value={classValue}
                   onChange={(e) => setClassValue(e.target.value)}
-                  placeholder="e.g., BSc Mathematics, Level 300"
+                  placeholder="e.g., MA 3"
                 />
               </div>
 
@@ -283,7 +280,7 @@ const Auth = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="you@example.com"
+                  placeholder="student's email"
                 />
               </div>
 
@@ -297,7 +294,6 @@ const Auth = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  placeholder="••••••••"
                   minLength={6}
                 />
               </div>
