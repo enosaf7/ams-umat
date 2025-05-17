@@ -1,4 +1,5 @@
 
+// @ts-nocheck
 // This is a Supabase Edge Function
 // TypeScript errors will be ignored at build time as these will run in the Supabase Deno environment
 
