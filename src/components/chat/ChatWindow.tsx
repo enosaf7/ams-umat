@@ -4,16 +4,19 @@ import { User } from "@supabase/supabase-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { SendHorizonal, Paperclip, X, FileImage, FileVideo, FileText, FileAudio, FileArchive } from "lucide-react";
-import { format } from "date-fns";
+import { SendHorizonal, Paperclip, X, FileImage, FileVideo, FileText, FileAudio, FileArchive, Trash, Edit } from "lucide-react";
+import { format, differenceInSeconds } from "date-fns";
 import { ChatContact, ChatMessage } from "@/pages/Chat";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 
 interface ChatWindowProps {
   messages: ChatMessage[];
   selectedContact: ChatContact | null;
   currentUser: User | null;
   onSendMessage: (content: string, file?: File) => void;
+  onEditMessage: (messageId: string, newContent: string) => void;
+  onDeleteMessage: (messageId: string) => void;
   loading: boolean;
 }
 
@@ -22,10 +25,14 @@ const ChatWindow = ({
   selectedContact,
   currentUser,
   onSendMessage,
+  onEditMessage,
+  onDeleteMessage,
   loading,
 }: ChatWindowProps) => {
   const [messageInput, setMessageInput] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editMessageContent, setEditMessageContent] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -62,6 +69,24 @@ const ChatWindow = ({
     setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  };
+
+  const handleStartEditing = (message: ChatMessage) => {
+    setEditingMessageId(message.id);
+    setEditMessageContent(message.content);
+  };
+
+  const handleCancelEditing = () => {
+    setEditingMessageId(null);
+    setEditMessageContent("");
+  };
+
+  const handleSaveEdit = () => {
+    if (editingMessageId && editMessageContent.trim()) {
+      onEditMessage(editingMessageId, editMessageContent.trim());
+      setEditingMessageId(null);
+      setEditMessageContent("");
     }
   };
 
@@ -183,6 +208,17 @@ const ChatWindow = ({
     }
   };
 
+  const canEditOrDeleteMessage = (message: ChatMessage): boolean => {
+    if (message.sender_id !== currentUser?.id) return false;
+    if (message.deleted) return false;
+    
+    const now = new Date();
+    const messageDate = new Date(message.created_at);
+    const secondsDiff = differenceInSeconds(now, messageDate);
+    
+    return secondsDiff <= 600; // 10 minutes (600 seconds)
+  };
+
   if (!selectedContact) {
     return (
       <div className="w-2/3 flex items-center justify-center h-full bg-gray-50">
@@ -229,6 +265,8 @@ const ChatWindow = ({
             const isCurrentUser = message.sender_id === currentUser?.id;
             const messageDate = new Date(message.created_at);
             const formattedTime = format(messageDate, "h:mm a");
+            const isEditing = message.id === editingMessageId;
+            const canModify = canEditOrDeleteMessage(message);
 
             return (
               <div
@@ -255,12 +293,73 @@ const ChatWindow = ({
                           : "bg-gray-100 text-gray-800"
                       }`}
                     >
-                      {message.content && <p className="text-sm">{message.content}</p>}
-                      {renderFilePreview(message)}
+                      {isEditing ? (
+                        <div className="flex flex-col space-y-2">
+                          <Textarea
+                            value={editMessageContent}
+                            onChange={(e) => setEditMessageContent(e.target.value)}
+                            className="min-h-[60px] bg-white text-black p-2 rounded"
+                          />
+                          <div className="flex justify-end space-x-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={handleCancelEditing}
+                              className="h-8 px-2 py-1 text-xs"
+                            >
+                              Cancel
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              onClick={handleSaveEdit}
+                              className="h-8 px-2 py-1 text-xs"
+                            >
+                              Save
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          {message.content && (
+                            <div className="flex items-start">
+                              <p className={`text-sm ${message.deleted ? "italic text-opacity-70" : ""}`}>
+                                {message.content}
+                              </p>
+                              {message.edited && !message.deleted && (
+                                <span className="text-xs ml-1 opacity-70">(edited)</span>
+                              )}
+                            </div>
+                          )}
+                          {renderFilePreview(message)}
+                        </>
+                      )}
                     </div>
-                    <p className={`text-xs mt-1 ${isCurrentUser ? "text-right" : ""} text-gray-500`}>
-                      {formattedTime}
-                    </p>
+                    <div className={`flex items-center mt-1 ${isCurrentUser ? "justify-end" : "justify-start"}`}>
+                      <p className="text-xs text-gray-500">{formattedTime}</p>
+                      
+                      {isCurrentUser && canModify && !isEditing && !message.deleted && (
+                        <div className="flex ml-2">
+                          <Button 
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleStartEditing(message)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Edit className="h-3 w-3 text-gray-500" />
+                            <span className="sr-only">Edit</span>
+                          </Button>
+                          <Button 
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onDeleteMessage(message.id)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Trash className="h-3 w-3 text-gray-500" />
+                            <span className="sr-only">Delete</span>
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

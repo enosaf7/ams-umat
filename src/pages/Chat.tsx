@@ -28,6 +28,10 @@ export type ChatMessage = {
   file_name?: string | null;
   file_type?: string | null;
   file_size?: number | null;
+  edited?: boolean;
+  edited_at?: string | null;
+  deleted?: boolean;
+  deleted_at?: string | null;
   sender?: {
     first_name: string | null;
     last_name: string | null;
@@ -91,6 +95,23 @@ const Chat = () => {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_messages',
+        },
+        (payload) => {
+          const updatedMessage = payload.new as ChatMessage;
+          
+          // If we're in a conversation with this person, update the messages
+          if (selectedContact && 
+              (updatedMessage.sender_id === selectedContact.id || updatedMessage.receiver_id === selectedContact.id)) {
+            fetchMessages(selectedContact.id);
+          }
+        }
+      )
       .subscribe();
   };
 
@@ -141,15 +162,15 @@ const Chat = () => {
     try {
       setLoading(true);
       
-      // 1. Fetch messages without joining
-      const { data: messagesData, error: messagesError } = await supabase
+      // 1. Fetch messages without joining - with better error handling
+      const messagesResponse = await supabase
         .from('chat_messages')
-        .select('id, sender_id, receiver_id, content, created_at, file_url, file_name, file_type, file_size')
+        .select('id, sender_id, receiver_id, content, created_at, file_url, file_name, file_type, file_size, edited, edited_at, deleted, deleted_at')
         .or(`and(sender_id.eq.${user?.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${user?.id})`)
         .order('created_at', { ascending: true });
 
-      if (messagesError) {
-        console.error('Error fetching messages:', messagesError);
+      if (messagesResponse.error) {
+        console.error('Error fetching messages:', messagesResponse.error);
         toast({
           title: "Error",
           description: "Failed to load messages. Please try again.",
@@ -159,15 +180,17 @@ const Chat = () => {
         return;
       }
 
+      const messagesData = messagesResponse.data || [];
+
       // 2. Fetch all unique sender profiles in one go
       const senderIds = Array.from(new Set(messagesData.map(msg => msg.sender_id)));
-      const { data: profilesData, error: profilesError } = await supabase
+      const profilesResponse = await supabase
         .from('profiles')
         .select('id, first_name, last_name, avatar_url')
         .in('id', senderIds);
 
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
+      if (profilesResponse.error) {
+        console.error('Error fetching profiles:', profilesResponse.error);
         toast({
           title: "Error",
           description: "Failed to load user profiles. Please try again.",
@@ -176,6 +199,8 @@ const Chat = () => {
         setLoading(false);
         return;
       }
+
+      const profilesData = profilesResponse.data || [];
 
       // 3. Create a map for quick profile lookup
       const profilesMap = new Map();
@@ -298,6 +323,62 @@ const Chat = () => {
     }
   };
 
+  const editMessage = async (messageId: string, newContent: string) => {
+    if (!user?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .update({
+          content: newContent,
+          edited: true,
+          edited_at: new Date().toISOString()
+        })
+        .eq('id', messageId)
+        .eq('sender_id', user.id)
+        .select();
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error editing message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to edit message. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteMessage = async (messageId: string) => {
+    if (!user?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .update({
+          content: "This message has been deleted",
+          deleted: true,
+          deleted_at: new Date().toISOString()
+        })
+        .eq('id', messageId)
+        .eq('sender_id', user.id)
+        .select();
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete message. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Layout>
       <div className="container mx-auto px-4 py-24">
@@ -315,6 +396,8 @@ const Chat = () => {
               selectedContact={selectedContact}
               currentUser={user}
               onSendMessage={sendMessage}
+              onEditMessage={editMessage}
+              onDeleteMessage={deleteMessage}
               loading={loading}
             />
           </div>
