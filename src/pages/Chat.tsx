@@ -12,6 +12,7 @@ export type ChatContact = {
   last_name: string | null;
   username: string | null;
   avatar_url: string | null;
+  unread_count: number;
   last_message?: string;
   last_message_time?: string;
 };
@@ -43,7 +44,7 @@ const Chat = () => {
   const [selectedContact, setSelectedContact] = useState<ChatContact | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Hide by default on mobile
 
   // For message input
   const [messageText, setMessageText] = useState("");
@@ -60,17 +61,16 @@ const Chat = () => {
         supabase.removeChannel(channel);
       };
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   useEffect(() => {
     if (selectedContact) {
       fetchMessages(selectedContact.id);
+      // Mark all messages as read when opening a chat
+      markMessagesAsRead(selectedContact.id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContact]);
 
-  // Clean up preview when file is deselected or component unmounts
   useEffect(() => {
     return () => {
       if (filePreview) {
@@ -78,6 +78,13 @@ const Chat = () => {
       }
     };
   }, [filePreview]);
+
+  // Request browser notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
 
   const setupRealtimeSubscription = () => {
     return supabase
@@ -95,34 +102,66 @@ const Chat = () => {
             newMessage.sender_id === user?.id ||
             newMessage.receiver_id === user?.id
           ) {
+            // If this is a new incoming message for this user,
             if (
               selectedContact &&
               (newMessage.sender_id === selectedContact.id ||
                 newMessage.receiver_id === selectedContact.id)
             ) {
               fetchMessages(selectedContact.id);
-            } else {
-              toast({
-                title: "New Message",
-                description: "You received a new message",
-              });
-              fetchContacts();
+              markMessagesAsRead(selectedContact.id);
             }
+            // Show notification if user is not currently chatting with the sender
+            if (
+              newMessage.receiver_id === user?.id &&
+              (!selectedContact || selectedContact.id !== newMessage.sender_id)
+            ) {
+              showBrowserNotification(newMessage);
+            }
+            // Always refresh contacts for updated unread counts
+            fetchContacts();
           }
         }
       )
       .subscribe();
   };
 
+  // Browser notification
+  const showBrowserNotification = (message: ChatMessage) => {
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification("New message", {
+        body: message.content || "Media message",
+        icon: message.sender?.avatar_url || "/default-avatar.png",
+      });
+    }
+  };
+
+  // Fetch contacts, with unread count (messages where receiver is current user and read is false)
   const fetchContacts = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      // Fetch contacts
+      const { data: profiles, error } = await supabase
         .from("profiles")
         .select("id, first_name, last_name, username, avatar_url")
         .neq("id", user?.id);
+
       if (error) throw error;
-      setContacts(data || []);
+
+      // For each contact, fetch unread count (as receiver)
+      const contactsWithUnread = await Promise.all(
+        (profiles || []).map(async (contact) => {
+          const { count } = await supabase
+            .from("chat_messages")
+            .select("id", { count: "exact", head: true })
+            .eq("receiver_id", user?.id)
+            .eq("sender_id", contact.id)
+            .eq("read", false);
+          return { ...contact, unread_count: count || 0 };
+        })
+      );
+
+      setContacts(contactsWithUnread);
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -130,7 +169,18 @@ const Chat = () => {
     }
   };
 
-  // -- THIS IS THE UPDATED QUERY: Fetch messages with sender profile info using correct join syntax --
+  // Mark all messages as read when user opens a chat
+  const markMessagesAsRead = async (contactId: string) => {
+    if (!user) return;
+    await supabase
+      .from("chat_messages")
+      .update({ read: true })
+      .eq("sender_id", contactId)
+      .eq("receiver_id", user.id)
+      .eq("read", false);
+    fetchContacts(); // Refresh sidebar badge
+  };
+
   const fetchMessages = async (contactId: string) => {
     try {
       setLoading(true);
@@ -177,7 +227,6 @@ const Chat = () => {
       return;
     }
 
-    // Always revoke previous preview
     if (filePreview) {
       URL.revokeObjectURL(filePreview);
     }
@@ -192,11 +241,9 @@ const Chat = () => {
       setFilePreview(null);
     }
 
-    // Reset input so same file can be selected again
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Remove selected file (and preview)
   const handleRemoveFile = () => {
     setSelectedFile(null);
     if (filePreview) {
@@ -206,7 +253,6 @@ const Chat = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Message sending
   const sendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!user || !selectedContact) return;
@@ -268,35 +314,47 @@ const Chat = () => {
   // When a contact is selected, close sidebar on mobile
   const handleSelectContact = (contact: ChatContact) => {
     setSelectedContact(contact);
-    if (window.innerWidth < 640) { // sm breakpoint
+    if (window.innerWidth < 640) {
       setSidebarOpen(false);
     }
+    markMessagesAsRead(contact.id);
   };
 
   return (
     <Layout>
       <div className="flex h-[80vh] w-full relative">
-        {/* Sidebar - show/hide based on sidebarOpen and screen size */}
-        <div className={`${sidebarOpen ? "block" : "hidden"} sm:block`}>
+        {/* Sidebar */}
+        <div
+          className={`
+            ${sidebarOpen ? "block absolute z-30 bg-white w-64 sm:static sm:z-0" : "hidden"}
+            sm:block
+            sm:w-80
+            transition-all
+            h-full
+            border-r
+          `}
+        >
           <ChatSidebar
             contacts={contacts}
             selectedContact={selectedContact}
             onSelectContact={handleSelectContact}
+            className="h-full"
           />
         </div>
-        {/* Reopen sidebar button for mobile */}
+
+        {/* Sidebar Toggle Button for Mobile */}
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
-            className="absolute top-4 left-4 z-30 sm:hidden bg-umat-green text-white p-2 rounded-full shadow"
+            className="absolute top-4 left-4 z-40 sm:hidden bg-umat-green text-white p-2 rounded-full shadow"
             aria-label="Open chat list"
           >
-            {/* Hamburger icon */}
             <svg width="24" height="24" fill="none" stroke="currentColor">
               <path d="M4 6h16M4 12h16M4 18h16" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </button>
         )}
+
         <div className="flex-1 flex flex-col border-l">
           <div className="flex-1 overflow-y-auto">
             {selectedContact ? (
