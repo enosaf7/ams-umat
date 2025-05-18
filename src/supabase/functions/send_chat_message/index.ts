@@ -39,7 +39,7 @@ serve(async (req) => {
     }
 
     // Parse the request body
-    const { p_receiver_id, p_content, p_file_url, p_file_name, p_file_type, p_file_size } = await req.json()
+    const { p_receiver_id, p_content } = await req.json()
 
     // Validate inputs
     if (!p_receiver_id || !p_content) {
@@ -49,32 +49,14 @@ serve(async (req) => {
       })
     }
 
-    // Prepare the message object with all possible fields
-    const messageData = {
-      sender_id: user.id,
-      receiver_id: p_receiver_id,
-      content: p_content,
-      read: false
-    }
-
-    // Add file properties if they exist
-    if (p_file_url) {
-      messageData.file_url = p_file_url
-    }
-    if (p_file_name) {
-      messageData.file_name = p_file_name
-    }
-    if (p_file_type) {
-      messageData.file_type = p_file_type
-    }
-    if (p_file_size !== null && p_file_size !== undefined) {
-      messageData.file_size = p_file_size
-    }
-
     // Insert the new message
     const { data, error } = await supabaseClient
       .from('chat_messages')
-      .insert(messageData)
+      .insert({
+        sender_id: user.id,
+        receiver_id: p_receiver_id,
+        content: p_content,
+      })
       .select()
 
     if (error) {

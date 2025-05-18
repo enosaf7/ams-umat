@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,14 +24,6 @@ export type ChatMessage = {
   receiver_id: string;
   content: string;
   created_at: string;
-  file_url?: string | null;
-  file_name?: string | null;
-  file_type?: string | null;
-  file_size?: number | null;
-  edited?: boolean;
-  edited_at?: string | null;
-  deleted?: boolean;
-  deleted_at?: string | null;
   sender?: {
     first_name: string | null;
     last_name: string | null;
@@ -94,23 +87,6 @@ const Chat = () => {
           }
         }
       )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'chat_messages',
-        },
-        (payload) => {
-          const updatedMessage = payload.new as ChatMessage;
-          
-          // If we're in a conversation with this person, update the messages
-          if (selectedContact && 
-              (updatedMessage.sender_id === selectedContact.id || updatedMessage.receiver_id === selectedContact.id)) {
-            fetchMessages(selectedContact.id);
-          }
-        }
-      )
       .subscribe();
   };
 
@@ -161,24 +137,57 @@ const Chat = () => {
     try {
       setLoading(true);
       
-      // Use the Supabase Edge Function to get messages with error handling
-      const { data: messagesData, error: messagesError } = await supabase.functions.invoke('get_chat_messages', {
-        body: { p_contact_id: contactId }
-      });
+      // 1. Fetch messages without joining
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('chat_messages')
+        .select('id, sender_id, receiver_id, content, created_at')
+        .or(`and(sender_id.eq.${user?.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${user?.id})`)
+        .order('created_at', { ascending: true });
 
       if (messagesError) {
-        console.error('Error fetching messages via edge function:', messagesError);
-        toast({
-          title: "Error",
-          description: "Failed to load messages. Please try again.",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
+        throw messagesError;
       }
 
-      setMessages(messagesData || []);
+      // 2. Fetch all unique sender profiles in one go
+      const senderIds = Array.from(new Set(messagesData.map(msg => msg.sender_id)));
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, avatar_url')
+        .in('id', senderIds);
 
+      if (profilesError) {
+        throw profilesError;
+      }
+
+      // 3. Create a map for quick profile lookup
+      const profilesMap = new Map();
+      profilesData.forEach(profile => {
+        profilesMap.set(profile.id, {
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          avatar_url: profile.avatar_url
+        });
+      });
+
+      // 4. Join the data manually
+      const enrichedMessages: ChatMessage[] = messagesData.map(message => ({
+        ...message,
+        sender: profilesMap.get(message.sender_id) || {
+          first_name: null,
+          last_name: null,
+          avatar_url: null
+        }
+      }));
+
+      setMessages(enrichedMessages);
+      
+      // Mark received messages as read
+      await supabase
+        .from('chat_messages')
+        .update({ read: true })
+        .eq('receiver_id', user?.id)
+        .eq('sender_id', contactId);
+        
     } catch (error) {
       console.error('Error fetching messages:', error);
       toast({
@@ -191,135 +200,30 @@ const Chat = () => {
     }
   };
 
-  const sendMessage = async (content: string, file?: File) => {
-    if (!selectedContact || (!content.trim() && !file) || !user?.id) return;
+  const sendMessage = async (content: string) => {
+    if (!selectedContact || !content.trim() || !user?.id) return;
 
     try {
-      let fileUrl = null;
-      let fileName = null;
-      let fileType = null;
-      let fileSize = null;
-
-      // Handle file upload if a file is selected
-      if (file) {
-        const fileExt = file.name.split('.').pop();
-        const filePath = `${user.id}/${Date.now()}-${file.name}`;
-        
-        // Create the chat_files bucket if it doesn't exist
-        const { data: bucketData, error: bucketError } = await supabase
-          .storage
-          .getBucket('chat_files');
-          
-        if (bucketError && bucketError.message.includes('not found')) {
-          await supabase.storage.createBucket('chat_files', {
-            public: true,
-            fileSizeLimit: 100 * 1024 * 1024 // 100MB limit
-          });
-        }
-        
-        // Upload the file
-        const { data, error } = await supabase
-          .storage
-          .from('chat_files')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (error) {
-          throw error;
-        }
-
-        // Get the public URL
-        const { data: publicURLData } = supabase
-          .storage
-          .from('chat_files')
-          .getPublicUrl(filePath);
-
-        fileUrl = publicURLData.publicUrl;
-        fileName = file.name;
-        fileType = file.type;
-        fileSize = file.size;
-      }
-
-      // Use the edge function to send a message
-      const { data, error } = await supabase.functions.invoke('send_chat_message', {
-        body: { 
-          p_receiver_id: selectedContact.id,
-          p_content: content.trim(),
-          p_file_url: fileUrl,
-          p_file_name: fileName,
-          p_file_type: fileType,
-          p_file_size: fileSize
-        }
-      });
+      // Direct database insert instead of using Edge Function
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .insert({
+          sender_id: user.id,
+          receiver_id: selectedContact.id,
+          content: content.trim()
+        })
+        .select();
 
       if (error) {
         throw error;
       }
-      
+
       // No need to refresh messages here as the realtime subscription will handle it
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const editMessage = async (messageId: string, newContent: string) => {
-    if (!user?.id) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .update({
-          content: newContent,
-          edited: true,
-          edited_at: new Date().toISOString()
-        })
-        .eq('id', messageId)
-        .eq('sender_id', user.id)
-        .select();
-
-      if (error) {
-        throw error;
-      }
-    } catch (error) {
-      console.error('Error editing message:', error);
-      toast({
-        title: "Error",
-        description: "Failed to edit message. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const deleteMessage = async (messageId: string) => {
-    if (!user?.id) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .update({
-          content: "This message has been deleted",
-          deleted: true,
-          deleted_at: new Date().toISOString()
-        })
-        .eq('id', messageId)
-        .eq('sender_id', user.id)
-        .select();
-
-      if (error) {
-        throw error;
-      }
-    } catch (error) {
-      console.error('Error deleting message:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete message. Please try again.",
         variant: "destructive",
       });
     }
@@ -342,8 +246,6 @@ const Chat = () => {
               selectedContact={selectedContact}
               currentUser={user}
               onSendMessage={sendMessage}
-              onEditMessage={editMessage}
-              onDeleteMessage={deleteMessage}
               loading={loading}
             />
           </div>
