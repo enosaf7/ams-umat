@@ -161,172 +161,24 @@ const Chat = () => {
     try {
       setLoading(true);
       
-      // First try to query with all fields including potential new columns
-      const messagesResponse = await supabase
-        .from('chat_messages')
-        .select('id, sender_id, receiver_id, content, created_at, file_url, file_name, file_type, file_size, edited, edited_at, deleted, deleted_at')
-        .or(`and(sender_id.eq.${user?.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${user?.id})`)
-        .order('created_at', { ascending: true });
+      // Use the Supabase Edge Function to get messages with error handling
+      const { data: messagesData, error: messagesError } = await supabase.functions.invoke('get_chat_messages', {
+        body: { p_contact_id: contactId }
+      });
 
-      // Handle potential schema mismatch or other errors
-      if (messagesResponse.error) {
-        // Check if the error is due to missing columns
-        if (messagesResponse.error.message && messagesResponse.error.message.includes("column 'file_url' does not exist")) {
-          console.warn("Database schema seems to be out of date. Using fallback query.");
-          
-          // Fallback to only select columns that should exist
-          const fallbackResponse = await supabase
-            .from('chat_messages')
-            .select('id, sender_id, receiver_id, content, created_at')
-            .or(`and(sender_id.eq.${user?.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${user?.id})`)
-            .order('created_at', { ascending: true });
-            
-          if (fallbackResponse.error) {
-            console.error('Error fetching messages (fallback):', fallbackResponse.error);
-            toast({
-              title: "Error",
-              description: "Failed to load messages. Please try again.",
-              variant: "destructive",
-            });
-            setLoading(false);
-            return;
-          }
-          
-          // Get the data from the successful response
-          const messagesData = fallbackResponse.data || [];
-          
-          // Only proceed with additional processing if we have messages
-          if (messagesData.length === 0) {
-            setMessages([]);
-            setLoading(false);
-            return;
-          }
-          
-          // Extract unique sender IDs for fetching profiles
-          const senderIds = Array.from(new Set(messagesData.map(msg => msg.sender_id)));
-          
-          const profilesResponse = await supabase
-            .from('profiles')
-            .select('id, first_name, last_name, avatar_url')
-            .in('id', senderIds);
-
-          if (profilesResponse.error) {
-            console.error('Error fetching profiles:', profilesResponse.error);
-            toast({
-              title: "Error",
-              description: "Failed to load user profiles. Please try again.",
-              variant: "destructive",
-            });
-            setLoading(false);
-            return;
-          }
-
-          const profilesData = profilesResponse.data || [];
-          
-          // Create a map for quick profile lookup
-          const profilesMap = new Map();
-          profilesData.forEach(profile => {
-            profilesMap.set(profile.id, {
-              first_name: profile.first_name,
-              last_name: profile.last_name,
-              avatar_url: profile.avatar_url
-            });
-          });
-
-          // Join the data manually and add default values for new fields
-          const enrichedMessages: ChatMessage[] = messagesData.map(message => ({
-            ...message,
-            file_url: null,
-            file_name: null,
-            file_type: null,
-            file_size: null,
-            edited: false,
-            edited_at: null,
-            deleted: false,
-            deleted_at: null,
-            sender: profilesMap.get(message.sender_id) || {
-              first_name: null,
-              last_name: null,
-              avatar_url: null
-            }
-          }));
-
-          setMessages(enrichedMessages);
-          setLoading(false);
-          return;
-        } else {
-          // Some other error occurred
-          console.error('Error fetching messages:', messagesResponse.error);
-          toast({
-            title: "Error",
-            description: "Failed to load messages. Please try again.",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
-      }
-
-      // If we get here, we successfully retrieved messages with all columns
-      const messagesData = messagesResponse.data || [];
-      
-      // Early return if no messages
-      if (messagesData.length === 0) {
-        setMessages([]);
-        setLoading(false);
-        return;
-      }
-
-      // Extract unique sender IDs for fetching profiles
-      const senderIds = Array.from(new Set(messagesData.map(msg => msg.sender_id)));
-      
-      const profilesResponse = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, avatar_url')
-        .in('id', senderIds);
-
-      if (profilesResponse.error) {
-        console.error('Error fetching profiles:', profilesResponse.error);
+      if (messagesError) {
+        console.error('Error fetching messages via edge function:', messagesError);
         toast({
           title: "Error",
-          description: "Failed to load user profiles. Please try again.",
+          description: "Failed to load messages. Please try again.",
           variant: "destructive",
         });
         setLoading(false);
         return;
       }
 
-      const profilesData = profilesResponse.data || [];
+      setMessages(messagesData || []);
 
-      // Create a map for quick profile lookup
-      const profilesMap = new Map();
-      profilesData.forEach(profile => {
-        profilesMap.set(profile.id, {
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          avatar_url: profile.avatar_url
-        });
-      });
-
-      // Join the data
-      const enrichedMessages: ChatMessage[] = messagesData.map(message => ({
-        ...message,
-        sender: profilesMap.get(message.sender_id) || {
-          first_name: null,
-          last_name: null,
-          avatar_url: null
-        }
-      }));
-
-      setMessages(enrichedMessages);
-      
-      // Mark received messages as read
-      await supabase
-        .from('chat_messages')
-        .update({ read: true })
-        .eq('receiver_id', user?.id)
-        .eq('sender_id', contactId);
-        
     } catch (error) {
       console.error('Error fetching messages:', error);
       toast({
@@ -390,24 +242,22 @@ const Chat = () => {
         fileSize = file.size;
       }
 
-      // Insert the message with or without file
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .insert({
-          sender_id: user.id,
-          receiver_id: selectedContact.id,
-          content: content.trim(),
-          file_url: fileUrl,
-          file_name: fileName,
-          file_type: fileType,
-          file_size: fileSize
-        })
-        .select();
+      // Use the edge function to send a message
+      const { data, error } = await supabase.functions.invoke('send_chat_message', {
+        body: { 
+          p_receiver_id: selectedContact.id,
+          p_content: content.trim(),
+          p_file_url: fileUrl,
+          p_file_name: fileName,
+          p_file_type: fileType,
+          p_file_size: fileSize
+        }
+      });
 
       if (error) {
         throw error;
       }
-
+      
       // No need to refresh messages here as the realtime subscription will handle it
     } catch (error) {
       console.error('Error sending message:', error);

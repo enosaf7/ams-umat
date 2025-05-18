@@ -49,69 +49,19 @@ serve(async (req) => {
       })
     }
 
-    // Try to use the full query with all possible columns
-    let query = supabaseClient
+    // Query chat messages with minimal columns first
+    const { data, error } = await supabaseClient
       .from('chat_messages')
       .select(`
-        id,
-        sender_id,
-        receiver_id,
-        content,
-        created_at,
-        file_url,
-        file_name,
-        file_type,
-        file_size,
-        edited,
-        edited_at,
-        deleted,
-        deleted_at,
-        sender:profiles!sender_id(first_name, last_name, avatar_url)
+        id, 
+        sender_id, 
+        receiver_id, 
+        content, 
+        created_at, 
+        read
       `)
       .or(`and(sender_id.eq.${user.id},receiver_id.eq.${p_contact_id}),and(sender_id.eq.${p_contact_id},receiver_id.eq.${user.id})`)
       .order('created_at', { ascending: true });
-
-    const { data, error } = await query;
-    
-    // If there's an error with the columns, try a fallback query with minimal columns
-    if (error && error.message && error.message.includes("column")) {
-      console.log("Using fallback query due to schema mismatch");
-      
-      const fallbackQuery = supabaseClient
-        .from('chat_messages')
-        .select(`
-          id,
-          sender_id,
-          receiver_id,
-          content,
-          created_at,
-          sender:profiles!sender_id(first_name, last_name, avatar_url)
-        `)
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${p_contact_id}),and(sender_id.eq.${p_contact_id},receiver_id.eq.${user.id})`)
-        .order('created_at', { ascending: true });
-        
-      const { data: fallbackData, error: fallbackError } = await fallbackQuery;
-      
-      if (fallbackError) {
-        console.error('Error fetching messages (fallback):', fallbackError);
-        return new Response(JSON.stringify({ error: fallbackError.message }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
-        });
-      }
-      
-      // Mark received messages as read
-      await supabaseClient
-        .from('chat_messages')
-        .update({ read: true })
-        .eq('receiver_id', user.id)
-        .eq('sender_id', p_contact_id);
-        
-      return new Response(JSON.stringify(fallbackData), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      });
-    }
     
     if (error) {
       console.error('Error fetching messages:', error);
@@ -121,14 +71,73 @@ serve(async (req) => {
       });
     }
 
-    // Mark received messages as read
+    // Fetch sender profiles for the messages
+    const senderIds = Array.from(new Set(data.map(msg => msg.sender_id)));
+    const { data: profilesData, error: profilesError } = await supabaseClient
+      .from('profiles')
+      .select('id, first_name, last_name, avatar_url')
+      .in('id', senderIds);
+    
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+      return new Response(JSON.stringify({ error: profilesError.message }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
+    }
+
+    // Create a map for quick profile lookup
+    const profilesMap = new Map();
+    profilesData.forEach(profile => {
+      profilesMap.set(profile.id, {
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        avatar_url: profile.avatar_url
+      });
+    });
+
+    // Check for extended fields availability
+    const { data: testData, error: testError } = await supabaseClient
+      .from('chat_messages')
+      .select('file_url')
+      .limit(1);
+    
+    const hasExtendedFields = !testError; // If there's no error, the fields exist
+
+    // Prepare messages with sender info and handle file fields
+    const messages = data.map(msg => {
+      const message = {
+        ...msg,
+        sender: profilesMap.get(msg.sender_id) || {
+          first_name: null,
+          last_name: null,
+          avatar_url: null
+        }
+      };
+
+      // If extended fields aren't available in the schema, add defaults
+      if (!hasExtendedFields) {
+        message.file_url = null;
+        message.file_name = null;
+        message.file_type = null;
+        message.file_size = null;
+        message.edited = false;
+        message.edited_at = null;
+        message.deleted = false;
+        message.deleted_at = null;
+      }
+
+      return message;
+    });
+
+    // Update read status for received messages
     await supabaseClient
       .from('chat_messages')
       .update({ read: true })
       .eq('receiver_id', user.id)
       .eq('sender_id', p_contact_id);
-
-    return new Response(JSON.stringify(data), {
+    
+    return new Response(JSON.stringify(messages), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
