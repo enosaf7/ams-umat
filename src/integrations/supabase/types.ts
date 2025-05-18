@@ -360,3 +360,31 @@ export const Constants = {
     Enums: {},
   },
 } as const
+// Find chat_messages type and update it:
+chat_messages: {
+  Row: {
+    id: string;
+    sender_id: string;
+    receiver_id: string;
+    content: string;
+    created_at: string;
+    read: boolean;
+    file_url: string | null;   // <-- add
+    file_type: string | null;  // <-- add
+    file_name: string | null;  // <-- add
+  };
+  Insert: {
+    content: string;
+    sender_id: string;
+    receiver_id: string;
+    created_at?: string;
+    read?: boolean;
+    file_url?: string | null;   // <-- add
+    file_type?: string | null;  // <-- add
+    file_name?: string | null;  // <-- add
+  };
+  Update: {
+    // ...same as Row, all fields optional
+  };
+  Relationships: [];
+}
