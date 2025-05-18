@@ -1,4 +1,5 @@
 import React from "react";
+import AvatarWithBadge from "@/components/common/AvatarWithBadge";
 import { ChatContact } from "@/pages/Chat";
 
 interface ChatSidebarProps {
@@ -26,18 +27,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             }`}
             onClick={() => onSelectContact(contact)}
           >
-            <div className="relative">
-              <img
-                src={contact.avatar_url || "/default-avatar.png"}
-                className="w-12 h-12 rounded-full border object-cover"
-                alt="avatar"
-              />
-              {contact.unread_count > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full px-1.5 py-0.5 shadow">
-                  {contact.unread_count}
-                </span>
-              )}
-            </div>
+            <AvatarWithBadge
+              src={contact.avatar_url || "/default-avatar.png"}
+              size={48}
+              alt={`${contact.first_name || ""} ${contact.last_name || ""}`.trim()}
+              unreadCount={contact.unread_count || 0}
+            />
             <div>
               <div className="font-semibold">
                 {contact.first_name} {contact.last_name}
