@@ -17,6 +17,9 @@ export type Database = {
           read: boolean
           receiver_id: string
           sender_id: string
+          file_url: string | null
+          file_type: string | null
+          file_name: string | null
         }
         Insert: {
           content: string
@@ -25,6 +28,9 @@ export type Database = {
           read?: boolean
           receiver_id: string
           sender_id: string
+          file_url?: string | null
+          file_type?: string | null
+          file_name?: string | null
         }
         Update: {
           content?: string
@@ -33,6 +39,9 @@ export type Database = {
           read?: boolean
           receiver_id?: string
           sender_id?: string
+          file_url?: string | null
+          file_type?: string | null
+          file_name?: string | null
         }
         Relationships: []
       }
