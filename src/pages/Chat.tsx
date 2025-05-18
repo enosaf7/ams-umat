@@ -42,6 +42,7 @@ const Chat = () => {
   const [selectedContact, setSelectedContact] = useState<ChatContact | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // For message input
   const [messageText, setMessageText] = useState("");
@@ -131,9 +132,10 @@ const Chat = () => {
   const fetchMessages = async (contactId: string) => {
     try {
       setLoading(true);
+      // Join sender profile so we can show avatar for each message
       const { data, error } = await supabase
         .from("chat_messages")
-        .select("*")
+        .select("*, sender:profiles(first_name,last_name,avatar_url)")
         .or(
           `and(sender_id.eq.${user?.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${user?.id})`
         )
@@ -255,14 +257,38 @@ const Chat = () => {
     }
   };
 
+  // When a contact is selected, close sidebar on mobile
+  const handleSelectContact = (contact: ChatContact) => {
+    setSelectedContact(contact);
+    if (window.innerWidth < 640) { // sm breakpoint
+      setSidebarOpen(false);
+    }
+  };
+
   return (
     <Layout>
-      <div className="flex h-[80vh] w-full">
-        <ChatSidebar
-          contacts={contacts}
-          selectedContact={selectedContact}
-          onSelectContact={setSelectedContact}
-        />
+      <div className="flex h-[80vh] w-full relative">
+        {/* Sidebar - show/hide based on sidebarOpen and screen size */}
+        <div className={`${sidebarOpen ? "block" : "hidden"} sm:block`}>
+          <ChatSidebar
+            contacts={contacts}
+            selectedContact={selectedContact}
+            onSelectContact={handleSelectContact}
+          />
+        </div>
+        {/* Reopen sidebar button for mobile */}
+        {!sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="absolute top-4 left-4 z-30 sm:hidden bg-umat-green text-white p-2 rounded-full shadow"
+            aria-label="Open chat list"
+          >
+            {/* Hamburger icon */}
+            <svg width="24" height="24" fill="none" stroke="currentColor">
+              <path d="M4 6h16M4 12h16M4 18h16" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
+        )}
         <div className="flex-1 flex flex-col border-l">
           <div className="flex-1 overflow-y-auto">
             {selectedContact ? (
