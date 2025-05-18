@@ -180,10 +180,32 @@ const Chat = () => {
         return;
       }
 
+      // Safely handle the messages data, ensuring we don't try to access properties on an error
       const messagesData = messagesResponse.data || [];
+      
+      // Ensure we have valid message data before proceeding
+      if (!Array.isArray(messagesData)) {
+        console.error('Expected array of messages but got:', messagesData);
+        toast({
+          title: "Error",
+          description: "Failed to process messages data. Please try again.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
 
       // 2. Fetch all unique sender profiles in one go
       const senderIds = Array.from(new Set(messagesData.map(msg => msg.sender_id)));
+      
+      // Check if we have valid senderIds before proceeding
+      if (senderIds.length === 0) {
+        // No messages or all messages have no sender_id
+        setMessages([]);
+        setLoading(false);
+        return;
+      }
+      
       const profilesResponse = await supabase
         .from('profiles')
         .select('id, first_name, last_name, avatar_url')
