@@ -171,14 +171,14 @@ const Chat = () => {
       setUploading(true);
       const filePath = `${user.id}/${Date.now()}_${selectedFile.name}`;
       const { error: uploadError } = await supabase.storage
-        .from("chat_files")
+        .from("chat-files")
         .upload(filePath, selectedFile);
       if (uploadError) {
         toast({ title: "File upload failed", description: uploadError.message });
         setUploading(false);
         return;
       }
-      const { data } = supabase.storage.from("chat_files").getPublicUrl(filePath);
+      const { data } = supabase.storage.from("chat-files").getPublicUrl(filePath);
       fileUrl = data.publicUrl;
       fileType = selectedFile.type;
       fileName = selectedFile.name;
