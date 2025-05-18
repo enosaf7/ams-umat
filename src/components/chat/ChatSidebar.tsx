@@ -1,104 +1,56 @@
-
-import { useState } from "react";
-import { User } from "@supabase/supabase-js";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import React from "react";
 import { ChatContact } from "@/pages/Chat";
 
 interface ChatSidebarProps {
   contacts: ChatContact[];
   selectedContact: ChatContact | null;
   onSelectContact: (contact: ChatContact) => void;
-  loading: boolean;
-  currentUser: User | null;
+  className?: string;
 }
 
-const ChatSidebar = ({
+const ChatSidebar: React.FC<ChatSidebarProps> = ({
   contacts,
   selectedContact,
   onSelectContact,
-  loading,
-  currentUser,
-}: ChatSidebarProps) => {
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const filteredContacts = contacts.filter(contact => {
-    const fullName = `${contact.first_name || ""} ${contact.last_name || ""}`.toLowerCase();
-    const username = (contact.username || "").toLowerCase();
-    const searchLower = searchTerm.toLowerCase();
-    
-    return fullName.includes(searchLower) || username.includes(searchLower);
-  });
-
-  const getInitials = (contact: ChatContact) => {
-    if (contact.first_name && contact.last_name) {
-      return `${contact.first_name[0]}${contact.last_name[0]}`;
-    }
-    if (contact.username) {
-      return contact.username[0].toUpperCase();
-    }
-    return "U";
-  };
-
+  className
+}) => {
   return (
-    <div className="w-1/3 border-r border-gray-200 h-full flex flex-col">
-      <div className="p-4 border-b">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search contacts..."
-            className="pl-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
-      
-      <div className="flex-1 overflow-y-auto">
-        {loading ? (
-          <div className="p-4 text-center text-gray-500">Loading contacts...</div>
-        ) : filteredContacts.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">
-            {searchTerm ? "No matching contacts found" : "No contacts available"}
-          </div>
-        ) : (
-          filteredContacts.map(contact => (
-            <div
-              key={contact.id}
-              className={`flex items-center p-4 hover:bg-gray-100 cursor-pointer ${
-                selectedContact?.id === contact.id ? "bg-gray-100" : ""
-              }`}
-              onClick={() => onSelectContact(contact)}
-            >
-              <Avatar className="h-10 w-10 mr-4">
-                {contact.avatar_url ? (
-                  <AvatarImage src={contact.avatar_url} alt={`${contact.first_name || ""} ${contact.last_name || ""}`} />
-                ) : (
-                  <AvatarFallback className="bg-umat-green text-white">
-                    {getInitials(contact)}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              <div className="flex-1">
-                <h3 className="text-sm font-medium">
-                  {contact.first_name && contact.last_name
-                    ? `${contact.first_name} ${contact.last_name}`
-                    : contact.username || "Unknown User"}
-                </h3>
-                {contact.last_message && (
-                  <p className="text-xs text-gray-500 truncate">
-                    {contact.last_message}
-                  </p>
-                )}
-              </div>
-              {contact.last_message_time && (
-                <span className="text-xs text-gray-400">{contact.last_message_time}</span>
+    <div className={`overflow-y-auto h-full bg-white ${className || ""}`}>
+      <h2 className="px-4 py-2 font-semibold text-lg border-b">Chats</h2>
+      <ul>
+        {contacts.map(contact => (
+          <li
+            key={contact.id}
+            className={`flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-100 ${
+              selectedContact?.id === contact.id ? "bg-gray-200" : ""
+            }`}
+            onClick={() => onSelectContact(contact)}
+          >
+            <div className="relative">
+              <img
+                src={contact.avatar_url || "/default-avatar.png"}
+                className="w-12 h-12 rounded-full border object-cover"
+                alt="avatar"
+              />
+              {contact.unread_count > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full px-1.5 py-0.5 shadow">
+                  {contact.unread_count}
+                </span>
               )}
             </div>
-          ))
-        )}
-      </div>
+            <div>
+              <div className="font-semibold">
+                {contact.first_name} {contact.last_name}
+              </div>
+              {contact.last_message && (
+                <div className="text-sm text-gray-500 truncate max-w-xs">
+                  {contact.last_message}
+                </div>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
