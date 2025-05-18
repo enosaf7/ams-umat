@@ -1,34 +1,51 @@
-import React from "react";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
-// Adjust the padding-top so the hero content is always visible below the navbar on all screen sizes.
-// If your navbar is 56px on mobile and 64px on desktop, use Tailwind's pt-14 (56px) and sm:pt-16 (64px).
-// If your navbar is a different height, adjust the pt-* values accordingly.
-
-const Hero: React.FC = () => {
+const Hero = () => {
   return (
-    <section className="w-full min-h-[60vh] flex flex-col justify-center items-center text-center bg-gradient-to-b from-white via-umat-green/10 to-transparent
-      pt-14 sm:pt-16 px-4">
-      <h1 className="text-3xl sm:text-5xl font-bold text-umat-green mb-4">
-        Welcome to AMS-UMAT
-      </h1>
-      <p className="text-lg sm:text-xl text-gray-700 mb-6 max-w-2xl">
-        The Academic Management System for UMAT. Manage your courses, results, and communication effectively, all in one place.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-4">
-        <a
-          href="/register"
-          className="bg-umat-green hover:bg-umat-green-dark text-white px-6 py-3 rounded shadow transition-colors font-semibold"
-        >
-          Get Started
-        </a>
-        <a
-          href="/about"
-          className="bg-white border border-umat-green text-umat-green hover:bg-umat-green hover:text-white px-6 py-3 rounded shadow transition-colors font-semibold"
-        >
-          Learn More
-        </a>
+    <div className="relative overflow-hidden bg-gradient-to-br from-umat-green/90 to-umat-green min-h-[600px] flex items-center">
+      {/* Mathematical symbols background */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-1/4 left-1/4 text-7xl">∫</div>
+        <div className="absolute top-1/2 left-3/4 text-8xl">Σ</div>
+        <div className="absolute bottom-1/4 left-1/3 text-6xl">∂</div>
+        <div className="absolute top-1/3 right-1/4 text-5xl">π</div>
+        <div className="absolute bottom-1/3 right-1/3 text-9xl">√</div>
+        <div className="absolute bottom-1/2 left-1/2 text-8xl">θ</div>
       </div>
-    </section>
+
+      <div className="container mx-auto px-6 relative z-10">
+        <div className="max-w-3xl text-white">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6">
+            Department of Mathematical Sciences
+          </h1>
+          <h2 className="text-xl md:text-2xl mb-8 text-gray-100 font-light">
+            University of Mines and Technology (UMaT), Ghana
+          </h2>
+          <p className="text-lg md:text-xl mb-8 text-gray-100">
+            Cultivating excellence in mathematical thinking, research, and innovation.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Button asChild size="lg" className="bg-umat-yellow hover:bg-umat-yellow/90 text-black">
+              <Link to="/about">About the Department</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="border-white text-black hover:bg-white/20">
+              <Link to="/students">Student Resources</Link>
+            </Button>
+          </div>
+          <div className="mt-16">
+            <p className="text-lg font-semibold text-umat-yellow italic">
+              "AMS! - Eureka, AMS!! - I've found it, MATHEMATICS!!! - The brain behind development"
+            </p>
+            <div className="text-lg font-semibold text-umat-yellow italic flex flex-col items-start">
+              <span>AMS! - Eureka,</span>
+              <span>AMS!! - I've found it,</span>
+              <span>MATHEMATICS!!! - The brain behind development</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
