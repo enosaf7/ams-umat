@@ -17,9 +17,9 @@ const ImageViewerModal: React.FC<Props> = ({ imageUrl, alt, onClose }) => {
       <img
         src={imageUrl}
         alt={alt || "Image"}
-        className="max-h-[90vh] max-w-[90vw] rounded shadow-lg"
+        className="max-h-[90vh] max-w-[90vw] rounded shadow-lg bg-white"
         onClick={e => e.stopPropagation()}
-        style={{ cursor: "default" }}
+        style={{ cursor: "default", background: "#fff" }}
       />
       <button
         className="absolute top-4 right-4 text-white text-3xl font-bold"
