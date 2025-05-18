@@ -23,7 +23,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
             message.sender_id === userId ? "self-end items-end" : "self-start items-start"
           }`}
         >
-          {/* DISPLAY FILES */}
+          {/* FILE PREVIEW */}
           {message.file_url && (
             <div className="mb-1">
               {(message.file_type === "image/jpeg" ||
@@ -32,8 +32,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
                   src={message.file_url}
                   alt={message.file_name || ""}
                   className="max-w-xs max-h-48 rounded border cursor-pointer"
+                  style={{ objectFit: "cover", background: "#fff" }}
                   onClick={() => setModalImage(message.file_url!)}
-                  style={{ objectFit: "cover" }}
                 />
               ) : message.file_type === "application/pdf" ? (
                 <a
@@ -46,7 +46,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
                   {message.file_name || "Download PDF"}
                 </a>
               ) : (
-                // Fallback for other file types
                 <a
                   href={message.file_url}
                   download={message.file_name || true}
@@ -59,7 +58,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
               )}
             </div>
           )}
-          {/* DISPLAY MESSAGE TEXT IF ANY */}
+          {/* MESSAGE TEXT IF ANY */}
           {message.content && (
             <div
               className={`px-4 py-2 rounded-lg ${
@@ -77,6 +76,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
         </div>
       ))}
 
+      {/* Modal for Image Preview */}
       <ImageViewerModal
         imageUrl={modalImage}
         onClose={() => setModalImage(null)}
