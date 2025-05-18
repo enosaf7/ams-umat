@@ -49,8 +49,8 @@ serve(async (req) => {
       })
     }
 
-    // Query the messages
-    const { data, error } = await supabaseClient
+    // Try to use the full query with all possible columns
+    let query = supabaseClient
       .from('chat_messages')
       .select(`
         id,
@@ -58,17 +58,67 @@ serve(async (req) => {
         receiver_id,
         content,
         created_at,
+        file_url,
+        file_name,
+        file_type,
+        file_size,
+        edited,
+        edited_at,
+        deleted,
+        deleted_at,
         sender:profiles!sender_id(first_name, last_name, avatar_url)
       `)
       .or(`and(sender_id.eq.${user.id},receiver_id.eq.${p_contact_id}),and(sender_id.eq.${p_contact_id},receiver_id.eq.${user.id})`)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: true });
 
+    const { data, error } = await query;
+    
+    // If there's an error with the columns, try a fallback query with minimal columns
+    if (error && error.message && error.message.includes("column")) {
+      console.log("Using fallback query due to schema mismatch");
+      
+      const fallbackQuery = supabaseClient
+        .from('chat_messages')
+        .select(`
+          id,
+          sender_id,
+          receiver_id,
+          content,
+          created_at,
+          sender:profiles!sender_id(first_name, last_name, avatar_url)
+        `)
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${p_contact_id}),and(sender_id.eq.${p_contact_id},receiver_id.eq.${user.id})`)
+        .order('created_at', { ascending: true });
+        
+      const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+      
+      if (fallbackError) {
+        console.error('Error fetching messages (fallback):', fallbackError);
+        return new Response(JSON.stringify({ error: fallbackError.message }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        });
+      }
+      
+      // Mark received messages as read
+      await supabaseClient
+        .from('chat_messages')
+        .update({ read: true })
+        .eq('receiver_id', user.id)
+        .eq('sender_id', p_contact_id);
+        
+      return new Response(JSON.stringify(fallbackData), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
+    
     if (error) {
-      console.error('Error fetching messages:', error)
+      console.error('Error fetching messages:', error);
       return new Response(JSON.stringify({ error: error.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
-      })
+      });
     }
 
     // Mark received messages as read
@@ -76,17 +126,17 @@ serve(async (req) => {
       .from('chat_messages')
       .update({ read: true })
       .eq('receiver_id', user.id)
-      .eq('sender_id', p_contact_id)
+      .eq('sender_id', p_contact_id);
 
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
-    })
+    });
   } catch (error) {
-    console.error(error)
+    console.error(error);
     return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
-    })
+    });
   }
-})
+});

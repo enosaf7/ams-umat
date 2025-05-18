@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -162,13 +161,14 @@ const Chat = () => {
     try {
       setLoading(true);
       
-      // 1. Fetch messages without joining - with better error handling
+      // First try to query with all fields including potential new columns
       const messagesResponse = await supabase
         .from('chat_messages')
         .select('id, sender_id, receiver_id, content, created_at, file_url, file_name, file_type, file_size, edited, edited_at, deleted, deleted_at')
         .or(`and(sender_id.eq.${user?.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${user?.id})`)
         .order('created_at', { ascending: true });
 
+      // Handle potential schema mismatch or other errors
       if (messagesResponse.error) {
         // Check if the error is due to missing columns
         if (messagesResponse.error.message && messagesResponse.error.message.includes("column 'file_url' does not exist")) {
@@ -192,17 +192,18 @@ const Chat = () => {
             return;
           }
           
-          // Process fallback response
+          // Get the data from the successful response
           const messagesData = fallbackResponse.data || [];
           
-          // 2. Fetch all unique sender profiles in one go
-          const senderIds = Array.from(new Set(messagesData.map(msg => msg.sender_id)));
-          
-          if (senderIds.length === 0) {
+          // Only proceed with additional processing if we have messages
+          if (messagesData.length === 0) {
             setMessages([]);
             setLoading(false);
             return;
           }
+          
+          // Extract unique sender IDs for fetching profiles
+          const senderIds = Array.from(new Set(messagesData.map(msg => msg.sender_id)));
           
           const profilesResponse = await supabase
             .from('profiles')
@@ -222,7 +223,7 @@ const Chat = () => {
 
           const profilesData = profilesResponse.data || [];
           
-          // 3. Create a map for quick profile lookup
+          // Create a map for quick profile lookup
           const profilesMap = new Map();
           profilesData.forEach(profile => {
             profilesMap.set(profile.id, {
@@ -232,7 +233,7 @@ const Chat = () => {
             });
           });
 
-          // 4. Join the data manually and add default values for new fields
+          // Join the data manually and add default values for new fields
           const enrichedMessages: ChatMessage[] = messagesData.map(message => ({
             ...message,
             file_url: null,
@@ -254,6 +255,7 @@ const Chat = () => {
           setLoading(false);
           return;
         } else {
+          // Some other error occurred
           console.error('Error fetching messages:', messagesResponse.error);
           toast({
             title: "Error",
@@ -265,31 +267,18 @@ const Chat = () => {
         }
       }
 
-      // If successful without error, process the standard response
+      // If we get here, we successfully retrieved messages with all columns
       const messagesData = messagesResponse.data || [];
       
-      // Ensure we have valid message data before proceeding
-      if (!Array.isArray(messagesData)) {
-        console.error('Expected array of messages but got:', messagesData);
-        toast({
-          title: "Error",
-          description: "Failed to process messages data. Please try again.",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-
-      // 2. Fetch all unique sender profiles in one go
-      const senderIds = Array.from(new Set(messagesData.map(msg => msg.sender_id)));
-      
-      // Check if we have valid senderIds before proceeding
-      if (senderIds.length === 0) {
-        // No messages or all messages have no sender_id
+      // Early return if no messages
+      if (messagesData.length === 0) {
         setMessages([]);
         setLoading(false);
         return;
       }
+
+      // Extract unique sender IDs for fetching profiles
+      const senderIds = Array.from(new Set(messagesData.map(msg => msg.sender_id)));
       
       const profilesResponse = await supabase
         .from('profiles')
@@ -309,7 +298,7 @@ const Chat = () => {
 
       const profilesData = profilesResponse.data || [];
 
-      // 3. Create a map for quick profile lookup
+      // Create a map for quick profile lookup
       const profilesMap = new Map();
       profilesData.forEach(profile => {
         profilesMap.set(profile.id, {
@@ -319,7 +308,7 @@ const Chat = () => {
         });
       });
 
-      // 4. Join the data manually
+      // Join the data
       const enrichedMessages: ChatMessage[] = messagesData.map(message => ({
         ...message,
         sender: profilesMap.get(message.sender_id) || {
