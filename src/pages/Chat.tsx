@@ -36,7 +36,7 @@ export type ChatMessage = {
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 const Chat = () => {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [contacts, setContacts] = useState<ChatContact[]>([]);
   const [selectedContact, setSelectedContact] = useState<ChatContact | null>(null);
@@ -46,6 +46,7 @@ const Chat = () => {
   // For message input
   const [messageText, setMessageText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,6 +66,15 @@ const Chat = () => {
     }
   }, [selectedContact]);
 
+  // Clean up preview when file is deselected or component unmounts
+  useEffect(() => {
+    return () => {
+      if (filePreview) {
+        URL.revokeObjectURL(filePreview);
+      }
+    };
+  }, [filePreview]);
+
   const setupRealtimeSubscription = () => {
     return supabase
       .channel("chat_messages_channel")
@@ -81,7 +91,6 @@ const Chat = () => {
             newMessage.sender_id === user?.id ||
             newMessage.receiver_id === user?.id
           ) {
-            // If currently chatting with this user, refresh messages
             if (
               selectedContact &&
               (newMessage.sender_id === selectedContact.id ||
@@ -136,7 +145,7 @@ const Chat = () => {
     }
   };
 
-  // File input validation and handling
+  // File input validation and preview
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -144,14 +153,36 @@ const Chat = () => {
     if (!allowedTypes.includes(file.type)) {
       toast({ title: "Only jpg, png, or pdf files allowed" });
       if (fileInputRef.current) fileInputRef.current.value = "";
+      setSelectedFile(null);
+      setFilePreview(null);
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
       toast({ title: "File must be ≤ 5MB" });
       if (fileInputRef.current) fileInputRef.current.value = "";
+      setSelectedFile(null);
+      setFilePreview(null);
       return;
     }
     setSelectedFile(file);
+
+    // Image preview
+    if (file.type.startsWith("image/")) {
+      const previewUrl = URL.createObjectURL(file);
+      setFilePreview(previewUrl);
+    } else {
+      setFilePreview(null);
+    }
+  };
+
+  // Remove selected file (and preview) before sending
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (filePreview) {
+      URL.revokeObjectURL(filePreview);
+      setFilePreview(null);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   // Message sending
@@ -184,6 +215,10 @@ const Chat = () => {
       fileName = selectedFile.name;
       setUploading(false);
       setSelectedFile(null);
+      if (filePreview) {
+        URL.revokeObjectURL(filePreview);
+        setFilePreview(null);
+      }
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
 
@@ -201,6 +236,10 @@ const Chat = () => {
     } else {
       setMessageText("");
       setSelectedFile(null);
+      if (filePreview) {
+        URL.revokeObjectURL(filePreview);
+        setFilePreview(null);
+      }
       fetchMessages(selectedContact.id);
     }
   };
@@ -238,9 +277,29 @@ const Chat = () => {
                   className="border rounded px-2 py-1"
                 />
                 {selectedFile && (
-                  <span className="text-xs text-gray-700">{selectedFile.name}</span>
+                  <>
+                    <span className="text-xs text-gray-700">{selectedFile.name}</span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveFile}
+                      className="ml-2 px-2 py-1 border rounded text-xs text-red-600"
+                      disabled={uploading}
+                    >
+                      Remove
+                    </button>
+                  </>
                 )}
               </div>
+              {/* Preview Section */}
+              {filePreview && (
+                <div className="mb-2">
+                  <img
+                    src={filePreview}
+                    alt="Preview"
+                    className="max-w-xs max-h-48 rounded border"
+                  />
+                </div>
+              )}
               <div className="flex gap-2">
                 <input
                   type="text"
