@@ -1,81 +1,35 @@
-
-// @ts-nocheck
-// This is a Supabase Edge Function
-// TypeScript errors will be ignored at build time as these will run in the Supabase Deno environment
-
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { serve } from 'std/server'
+import { createClient } from '@supabase/supabase-js'
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+  const {
+    content,
+    sender_id,
+    receiver_id,
+    file_url = null,
+    file_type = null,
+    file_name = null
+  } = await req.json()
+
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  )
+
+  const { error } = await supabase
+    .from('chat_messages')
+    .insert([{
+      content,
+      sender_id,
+      receiver_id,
+      file_url,
+      file_type,
+      file_name
+    }])
+
+  if (error) {
+    return new Response(JSON.stringify({ error: error.message }), { status: 400 })
   }
 
-  try {
-    // Create a Supabase client with the Auth context of the logged in user
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    )
-
-    // Now we can get the session or user object
-    const { data: { user } } = await supabaseClient.auth.getUser()
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      })
-    }
-
-    // Parse the request body
-    const { p_receiver_id, p_content } = await req.json()
-
-    // Validate inputs
-    if (!p_receiver_id || !p_content) {
-      return new Response(JSON.stringify({ error: 'Receiver ID and content are required' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      })
-    }
-
-    // Insert the new message
-    const { data, error } = await supabaseClient
-      .from('chat_messages')
-      .insert({
-        sender_id: user.id,
-        receiver_id: p_receiver_id,
-        content: p_content,
-      })
-      .select()
-
-    if (error) {
-      console.error('Error sending message:', error)
-      return new Response(JSON.stringify({ error: error.message }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      })
-    }
-
-    return new Response(JSON.stringify(data), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    })
-  } catch (error) {
-    console.error(error)
-    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    })
-  }
+  return new Response(JSON.stringify({ success: true }), { status: 200 })
 })
