@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ChatMessage } from "@/pages/Chat";
 import ImageViewerModal from "./ImageViewerModal";
+import AvatarWithBadge from "@/components/common/AvatarWithBadge";
 
 interface ChatWindowProps {
   messages: ChatMessage[];
@@ -24,8 +25,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
       {messages.map((message) => {
         const isSender = message.sender_id === userId;
         const avatarUrl =
-          message.sender?.avatar_url ||
-          "/default-avatar.png"; // fallback image if avatar missing
+          message.sender?.avatar_url || "/default-avatar.png"; // fallback image
 
         return (
           <div
@@ -34,11 +34,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
               isSender ? "self-end flex-row-reverse" : "self-start"
             }`}
           >
-            {/* Avatar */}
-            <img
+            {/* Avatar with badge (no badge count per message, but you could use message.unread_count if available) */}
+            <AvatarWithBadge
               src={avatarUrl}
+              size={32}
               alt="avatar"
-              className="w-8 h-8 rounded-full border object-cover"
+              unreadCount={0}
             />
             <div className="flex flex-col items-start">
               {/* File Preview */}
