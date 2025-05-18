@@ -23,8 +23,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
 
       {messages.map((message) => {
         const isSender = message.sender_id === userId;
-        // Use sender.avatar_url for all messages, or fall back to a default avatar
-        const avatarUrl = message.sender?.avatar_url || "/default-avatar.png";
+        const avatarUrl =
+          message.sender?.avatar_url ||
+          "/default-avatar.png"; // fallback image if avatar missing
+
         return (
           <div
             key={message.id}
@@ -32,14 +34,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
               isSender ? "self-end flex-row-reverse" : "self-start"
             }`}
           >
-            {/* Avatar for each message */}
+            {/* Avatar */}
             <img
               src={avatarUrl}
               alt="avatar"
               className="w-8 h-8 rounded-full border object-cover"
             />
             <div className="flex flex-col items-start">
-              {/* FILE PREVIEW */}
+              {/* File Preview */}
               {message.file_url && (
                 <div className="mb-1">
                   {(message.file_type === "image/jpeg" ||
@@ -74,7 +76,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
                   )}
                 </div>
               )}
-              {/* MESSAGE TEXT IF ANY */}
+              {/* Message Text */}
               {message.content && (
                 <div
                   className={`px-4 py-2 rounded-lg ${
