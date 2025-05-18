@@ -1,57 +1,75 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../../utils/supabaseClient';
+import React from "react";
+import { ChatMessage } from "@/pages/Chat";
 
-interface ChatMessage {
-  id: string;
-  content: string;
-  sender_id: string;
-  receiver_id: string;
-  created_at: string;
-  file_url: string | null;
-  file_type: string | null;
-  file_name: string | null;
+interface ChatWindowProps {
+  messages: ChatMessage[];
+  userId: string;
 }
 
-export default function ChatWindow() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-
-  useEffect(() => {
-    const fetchMessages = async () => {
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .select('*')
-        .order('created_at', { ascending: true });
-      if (!error && data) setMessages(data as ChatMessage[]);
-    };
-    fetchMessages();
-    // Optionally, add real-time updates here
-  }, []);
-
+const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
   return (
-    <div style={{maxHeight: 400, overflowY: 'auto', border: '1px solid #ccc', marginBottom: 12}}>
-      {messages.map(msg => (
-        <div key={msg.id} style={{marginBottom: 16, padding: 8, borderBottom: '1px solid #eee'}}>
-          <div>{msg.content}</div>
-          {msg.file_url && (
-            <div style={{marginTop: 8}}>
-              {msg.file_type?.startsWith('image/') ? (
-                <img src={msg.file_url} alt={msg.file_name ?? ''} style={{maxWidth: 200, display: 'block'}} />
-              ) : msg.file_type === 'application/pdf' ? (
-                <a href={msg.file_url} target="_blank" rel="noopener noreferrer">
-                  View PDF
+    <div className="p-4 flex flex-col gap-4 overflow-y-auto min-h-[300px]">
+      {messages.length === 0 && (
+        <div className="text-center text-gray-400">No messages yet.</div>
+      )}
+      {messages.map((message) => (
+        <div
+          key={message.id}
+          className={`flex flex-col max-w-xs ${
+            message.sender_id === userId ? "self-end items-end" : "self-start items-start"
+          }`}
+        >
+          {/* File rendering */}
+          {message.file_url && (
+            <div className="mb-1">
+              {message.file_type?.startsWith("image/") ? (
+                <img
+                  src={message.file_url}
+                  alt={message.file_name || ""}
+                  className="max-w-xs max-h-48 rounded border"
+                />
+              ) : message.file_type === "application/pdf" ? (
+                <a
+                  href={message.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 underline"
+                  download={message.file_name || true}
+                >
+                  {message.file_name || "View PDF"}
                 </a>
               ) : (
-                <a href={msg.file_url} target="_blank" rel="noopener noreferrer">
-                  Download File
+                <a
+                  href={message.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 underline"
+                  download={message.file_name || true}
+                >
+                  {message.file_name || "Download file"}
                 </a>
               )}
-              <div>
-                <strong>File:</strong> {msg.file_name} ({msg.file_type})
-              </div>
             </div>
           )}
+          {/* Text rendering */}
+          {message.content && (
+            <div
+              className={`px-4 py-2 rounded-lg ${
+                message.sender_id === userId
+                  ? "bg-umat-green text-white"
+                  : "bg-gray-100 text-gray-900"
+              }`}
+            >
+              {message.content}
+            </div>
+          )}
+          <span className="text-xs text-gray-400 mt-1">
+            {new Date(message.created_at).toLocaleString()}
+          </span>
         </div>
       ))}
     </div>
   );
-}
+};
+
+export default ChatWindow;
