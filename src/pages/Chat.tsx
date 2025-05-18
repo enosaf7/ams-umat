@@ -170,17 +170,102 @@ const Chat = () => {
         .order('created_at', { ascending: true });
 
       if (messagesResponse.error) {
-        console.error('Error fetching messages:', messagesResponse.error);
-        toast({
-          title: "Error",
-          description: "Failed to load messages. Please try again.",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
+        // Check if the error is due to missing columns
+        if (messagesResponse.error.message && messagesResponse.error.message.includes("column 'file_url' does not exist")) {
+          console.warn("Database schema seems to be out of date. Using fallback query.");
+          
+          // Fallback to only select columns that should exist
+          const fallbackResponse = await supabase
+            .from('chat_messages')
+            .select('id, sender_id, receiver_id, content, created_at')
+            .or(`and(sender_id.eq.${user?.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${user?.id})`)
+            .order('created_at', { ascending: true });
+            
+          if (fallbackResponse.error) {
+            console.error('Error fetching messages (fallback):', fallbackResponse.error);
+            toast({
+              title: "Error",
+              description: "Failed to load messages. Please try again.",
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
+          
+          // Process fallback response
+          const messagesData = fallbackResponse.data || [];
+          
+          // 2. Fetch all unique sender profiles in one go
+          const senderIds = Array.from(new Set(messagesData.map(msg => msg.sender_id)));
+          
+          if (senderIds.length === 0) {
+            setMessages([]);
+            setLoading(false);
+            return;
+          }
+          
+          const profilesResponse = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, avatar_url')
+            .in('id', senderIds);
+
+          if (profilesResponse.error) {
+            console.error('Error fetching profiles:', profilesResponse.error);
+            toast({
+              title: "Error",
+              description: "Failed to load user profiles. Please try again.",
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
+
+          const profilesData = profilesResponse.data || [];
+          
+          // 3. Create a map for quick profile lookup
+          const profilesMap = new Map();
+          profilesData.forEach(profile => {
+            profilesMap.set(profile.id, {
+              first_name: profile.first_name,
+              last_name: profile.last_name,
+              avatar_url: profile.avatar_url
+            });
+          });
+
+          // 4. Join the data manually and add default values for new fields
+          const enrichedMessages: ChatMessage[] = messagesData.map(message => ({
+            ...message,
+            file_url: null,
+            file_name: null,
+            file_type: null,
+            file_size: null,
+            edited: false,
+            edited_at: null,
+            deleted: false,
+            deleted_at: null,
+            sender: profilesMap.get(message.sender_id) || {
+              first_name: null,
+              last_name: null,
+              avatar_url: null
+            }
+          }));
+
+          setMessages(enrichedMessages);
+          setLoading(false);
+          return;
+        } else {
+          console.error('Error fetching messages:', messagesResponse.error);
+          toast({
+            title: "Error",
+            description: "Failed to load messages. Please try again.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
       }
 
-      // Safely handle the messages data, ensuring we don't try to access properties on an error
+      // If successful without error, process the standard response
       const messagesData = messagesResponse.data || [];
       
       // Ensure we have valid message data before proceeding
