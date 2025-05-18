@@ -19,10 +19,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
             message.sender_id === userId ? "self-end items-end" : "self-start items-start"
           }`}
         >
-          {/* File rendering */}
+          {/* DISPLAY FILES */}
           {message.file_url && (
             <div className="mb-1">
-              {message.file_type?.startsWith("image/") ? (
+              {(message.file_type === "image/jpeg" ||
+                message.file_type === "image/png") ? (
                 <img
                   src={message.file_url}
                   alt={message.file_name || ""}
@@ -31,27 +32,28 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
               ) : message.file_type === "application/pdf" ? (
                 <a
                   href={message.file_url}
+                  download={message.file_name || true}
+                  className="text-blue-600 underline"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 underline"
-                  download={message.file_name || true}
                 >
-                  {message.file_name || "View PDF"}
+                  {message.file_name || "Download PDF"}
                 </a>
               ) : (
+                // Fallback for other file types
                 <a
                   href={message.file_url}
+                  download={message.file_name || true}
+                  className="text-blue-600 underline"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 underline"
-                  download={message.file_name || true}
                 >
                   {message.file_name || "Download file"}
                 </a>
               )}
             </div>
           )}
-          {/* Text rendering */}
+          {/* DISPLAY MESSAGE TEXT IF ANY */}
           {message.content && (
             <div
               className={`px-4 py-2 rounded-lg ${
