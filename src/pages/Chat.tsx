@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import ChatSidebar from "@/components/chat/ChatSidebar";
 import ChatWindow from "@/components/chat/ChatWindow";
 import { Layout } from "@/components/layout/Layout";
+import AvatarWithBadge from "@/components/common/AvatarWithBadge";
 
 export type ChatContact = {
   id: string;
@@ -53,9 +54,13 @@ const Chat = () => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Unread count for current user (for their own avatar)
+  const [myUnreadCount, setMyUnreadCount] = useState(0);
+
   useEffect(() => {
     if (user) {
       fetchContacts();
+      fetchMyUnreadCount();
       const channel = setupRealtimeSubscription();
       return () => {
         supabase.removeChannel(channel);
@@ -79,7 +84,6 @@ const Chat = () => {
     };
   }, [filePreview]);
 
-  // Request browser notification permission on mount
   useEffect(() => {
     if ('Notification' in window && Notification.permission === "default") {
       Notification.requestPermission();
@@ -102,7 +106,6 @@ const Chat = () => {
             newMessage.sender_id === user?.id ||
             newMessage.receiver_id === user?.id
           ) {
-            // If this is a new incoming message for this user,
             if (
               selectedContact &&
               (newMessage.sender_id === selectedContact.id ||
@@ -118,15 +121,14 @@ const Chat = () => {
             ) {
               showBrowserNotification(newMessage);
             }
-            // Always refresh contacts for updated unread counts
             fetchContacts();
+            fetchMyUnreadCount();
           }
         }
       )
       .subscribe();
   };
 
-  // Browser notification
   const showBrowserNotification = (message: ChatMessage) => {
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification("New message", {
@@ -169,6 +171,17 @@ const Chat = () => {
     }
   };
 
+  // Fetch unread for this user (for their own avatar badge)
+  const fetchMyUnreadCount = async () => {
+    if (!user) return;
+    const { count } = await supabase
+      .from("chat_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("receiver_id", user.id)
+      .eq("read", false);
+    setMyUnreadCount(count || 0);
+  };
+
   // Mark all messages as read when user opens a chat
   const markMessagesAsRead = async (contactId: string) => {
     if (!user) return;
@@ -178,7 +191,8 @@ const Chat = () => {
       .eq("sender_id", contactId)
       .eq("receiver_id", user.id)
       .eq("read", false);
-    fetchContacts(); // Refresh sidebar badge
+    fetchContacts();
+    fetchMyUnreadCount();
   };
 
   const fetchMessages = async (contactId: string) => {
@@ -320,8 +334,22 @@ const Chat = () => {
     markMessagesAsRead(contact.id);
   };
 
+  // Example: use AvatarWithBadge for the user's avatar in the header (adjust as needed)
+  // Replace your current avatar code with this wherever you display the user's profile picture
+  // <AvatarWithBadge src={user.avatar_url || "/default-avatar.png"} size={40} alt={user.username} unreadCount={myUnreadCount} />
+
   return (
     <Layout>
+      {/* Example usage in top bar - adjust location as needed */}
+      <div className="flex items-center p-2 border-b bg-white">
+        <AvatarWithBadge
+          src={user?.avatar_url || "/default-avatar.png"}
+          size={40}
+          alt={user?.username || "My profile"}
+          unreadCount={myUnreadCount}
+        />
+        <span className="ml-2 font-bold">{user?.username}</span>
+      </div>
       <div className="flex h-[80vh] w-full relative">
         {/* Sidebar */}
         <div
