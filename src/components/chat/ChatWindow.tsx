@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ChatMessage } from "@/pages/Chat";
 import ImageViewerModal from "./ImageViewerModal";
 
@@ -8,10 +8,18 @@ interface ChatWindowProps {
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
-  const [modalImage, setModalImage] = useState<string|null>(null);
+  const [modalImage, setModalImage] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  // Auto-scroll to last message when messages change
+  useEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   return (
-    <div className="p-4 flex flex-col gap-4 overflow-y-auto min-h-[300px]">
+    <div className="p-4 flex flex-col gap-4 overflow-y-auto min-h-[300px] h-full">
       {messages.length === 0 && (
         <div className="text-center text-gray-400">No messages yet.</div>
       )}
@@ -75,6 +83,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
           </span>
         </div>
       ))}
+
+      {/* This div is for auto-scrolling to the last message */}
+      <div ref={bottomRef} />
 
       {/* Modal for Image Preview */}
       <ImageViewerModal
