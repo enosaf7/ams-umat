@@ -27,6 +27,7 @@ export type ChatMessage = {
   file_type: string | null;
   file_name: string | null;
   sender?: {
+    id: string;
     first_name: string | null;
     last_name: string | null;
     avatar_url: string | null;
@@ -129,13 +130,20 @@ const Chat = () => {
     }
   };
 
+  // -- THIS IS THE UPDATED QUERY: Fetch messages with sender profile info using correct join syntax --
   const fetchMessages = async (contactId: string) => {
     try {
       setLoading(true);
-      // Join sender profile so we can show avatar for each message
       const { data, error } = await supabase
         .from("chat_messages")
-        .select("*, sender:profiles(first_name,last_name,avatar_url)")
+        .select(
+          `
+            *,
+            sender:profiles!chat_messages_sender_id_fkey (
+              id, first_name, last_name, avatar_url
+            )
+          `
+        )
         .or(
           `and(sender_id.eq.${user?.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${user?.id})`
         )
