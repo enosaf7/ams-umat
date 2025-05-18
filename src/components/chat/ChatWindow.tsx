@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { ChatMessage } from "@/pages/Chat";
+import ImageViewerModal from "./ImageViewerModal";
 
 interface ChatWindowProps {
   messages: ChatMessage[];
@@ -7,11 +8,14 @@ interface ChatWindowProps {
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
+  const [modalImage, setModalImage] = useState<string|null>(null);
+
   return (
     <div className="p-4 flex flex-col gap-4 overflow-y-auto min-h-[300px]">
       {messages.length === 0 && (
         <div className="text-center text-gray-400">No messages yet.</div>
       )}
+
       {messages.map((message) => (
         <div
           key={message.id}
@@ -27,7 +31,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
                 <img
                   src={message.file_url}
                   alt={message.file_name || ""}
-                  className="max-w-xs max-h-48 rounded border"
+                  className="max-w-xs max-h-48 rounded border cursor-pointer"
+                  onClick={() => setModalImage(message.file_url!)}
+                  style={{ objectFit: "cover" }}
                 />
               ) : message.file_type === "application/pdf" ? (
                 <a
@@ -70,6 +76,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, userId }) => {
           </span>
         </div>
       ))}
+
+      <ImageViewerModal
+        imageUrl={modalImage}
+        onClose={() => setModalImage(null)}
+      />
     </div>
   );
 };
