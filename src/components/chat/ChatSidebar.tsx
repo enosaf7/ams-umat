@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import AvatarWithBadge from "@/components/common/AvatarWithBadge";
 import { ChatContact } from "@/pages/Chat";
 
@@ -15,11 +15,36 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   onSelectContact,
   className
 }) => {
+  const [search, setSearch] = useState("");
+
+  // Filter contacts based on search string
+  const filteredContacts = useMemo(() => {
+    if (!search.trim()) return contacts;
+    const lower = search.toLowerCase();
+    return contacts.filter(contact => {
+      const name = `${contact.first_name ?? ""} ${contact.last_name ?? ""}`.toLowerCase();
+      const username = (contact.username ?? "").toLowerCase();
+      return name.includes(lower) || username.includes(lower);
+    });
+  }, [contacts, search]);
+
   return (
     <div className={`overflow-y-auto h-full bg-white ${className || ""}`}>
       <h2 className="px-4 py-2 font-semibold text-lg border-b">Chats</h2>
+      <div className="px-4 py-2">
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search contacts…"
+          className="w-full px-3 py-2 rounded border text-sm"
+        />
+      </div>
       <ul>
-        {contacts.map(contact => (
+        {filteredContacts.length === 0 && (
+          <li className="px-4 py-2 text-gray-400">No contacts found.</li>
+        )}
+        {filteredContacts.map(contact => (
           <li
             key={contact.id}
             className={`flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-100 ${
