@@ -17,6 +17,7 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
     const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.error('Server configuration error', { SUPABASE_URL, SUPABASE_ANON_KEY });
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
@@ -26,6 +27,7 @@ serve(async (req) => {
     // Get Authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('Missing Authorization header');
       return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
@@ -44,12 +46,14 @@ serve(async (req) => {
     // Get user
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError) {
+      console.error('User error:', userError.message);
       return new Response(JSON.stringify({ error: userError.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
       });
     }
     if (!user) {
+      console.error('Unauthorized access - no user');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
@@ -61,6 +65,7 @@ serve(async (req) => {
     try {
       body = await req.json();
     } catch {
+      console.error('Invalid JSON in request body');
       return new Response(JSON.stringify({ error: 'Invalid JSON in request body' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
@@ -68,6 +73,7 @@ serve(async (req) => {
     }
     const { p_contact_id } = body || {};
     if (!p_contact_id) {
+      console.error('Contact ID is required');
       return new Response(JSON.stringify({ error: 'Contact ID is required' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
@@ -91,6 +97,7 @@ serve(async (req) => {
       .order('created_at', { ascending: true });
 
     if (messagesError) {
+      console.error('Messages fetch error:', messagesError.message);
       return new Response(JSON.stringify({ error: messagesError.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
@@ -111,6 +118,7 @@ serve(async (req) => {
       .in('id', senderIds);
 
     if (profilesError) {
+      console.error('Profiles fetch error:', profilesError.message);
       return new Response(JSON.stringify({ error: profilesError.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
@@ -169,7 +177,6 @@ serve(async (req) => {
       .eq('receiver_id', user.id)
       .eq('sender_id', p_contact_id);
 
-    // No hard fail if read update fails; just log it
     if (updateError) {
       console.error('Failed to update read status:', updateError.message);
     }
