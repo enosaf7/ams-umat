@@ -1,18 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-
-const Hero = () => {
-  return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-umat-green/90 to-umat-green min-h-[600px] flex items-center">
-      {/* Mathematical symbols background */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-1/4 left-1/4 text-7xl">∫</div>
-        <div className="absolute top-1/2 left-3/4 text-8xl">Σ</div>
-        <div className="absolute bottom-1/4 left-1/3 text-6xl">∂</div>
-        <div className="absolute top-1/3 right-1/4 text-5xl">π</div>
-        <div className="absolute bottom-1/3 right-1/3 text-9xl">√</div>
-        <div className="absolute bottom-1/2 left-1/2 text-8xl">θ</div>
-      </div>
+<section className="pt-14 sm:pt-16 ...">
+  const Hero = () => {
+    return (
+      <div className="relative overflow-hidden bg-gradient-to-br from-umat-green/90 to-umat-green min-h-[600px] flex items-center">
+        {/* Mathematical symbols background */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-1/4 left-1/4 text-7xl">∫</div>
+          <div className="absolute top-1/2 left-3/4 text-8xl">Σ</div>
+          <div className="absolute bottom-1/4 left-1/3 text-6xl">∂</div>
+          <div className="absolute top-1/3 right-1/4 text-5xl">π</div>
+          <div className="absolute bottom-1/3 right-1/3 text-9xl">√</div>
+          <div className="absolute bottom-1/2 left-1/2 text-8xl">θ</div>
+        </div>
+  </section>
 
       <div className="container mx-auto px-6 relative z-10">
         <div className="max-w-3xl text-white">
