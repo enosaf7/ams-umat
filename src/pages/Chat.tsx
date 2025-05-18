@@ -58,12 +58,14 @@ const Chat = () => {
         supabase.removeChannel(channel);
       };
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   useEffect(() => {
     if (selectedContact) {
       fetchMessages(selectedContact.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContact]);
 
   // Clean up preview when file is deselected or component unmounts
@@ -164,6 +166,12 @@ const Chat = () => {
       setFilePreview(null);
       return;
     }
+
+    // Always revoke previous preview
+    if (filePreview) {
+      URL.revokeObjectURL(filePreview);
+    }
+
     setSelectedFile(file);
 
     // Image preview
@@ -173,9 +181,12 @@ const Chat = () => {
     } else {
       setFilePreview(null);
     }
+
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Remove selected file (and preview) before sending
+  // Remove selected file (and preview)
   const handleRemoveFile = () => {
     setSelectedFile(null);
     if (filePreview) {
