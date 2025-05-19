@@ -1,137 +1,224 @@
+
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import DepartmentLogo from "@/components/ui/DepartmentLogo";
+import { MessageSquare } from "lucide-react";
 
 const Navbar = () => {
-  const { user, profile } = useAuth();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, profile, signOut } = useAuth();
 
   useEffect(() => {
-    setMobileMenuOpen(false); // Close menu when route changes
-  }, [location.pathname]);
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  const navLinks = [
+    { name: "Home", path: "/" },
+    { name: "About", path: "/about" },
+    { name: "Lecturers", path: "/lecturers" },
+    { name: "Students", path: "/students" },
+    { name: "News", path: "/news" },
+    { name: "Contact", path: "/contact" },
+  ];
+
+  // Add Admin link if user has admin role
+  if (profile?.role === 'admin') {
+    navLinks.push({ name: "Admin", path: "/admin" });
+  }
+
+  // Get user's display name
+  const getUserDisplayName = () => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name} ${profile.last_name}`;
+    }
+    return profile?.username || 'User';
+  };
+
+  // Get user's initials for avatar fallback
+  const getUserInitials = () => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name[0]}${profile.last_name[0]}`;
+    }
+    if (profile?.username) {
+      return profile.username[0].toUpperCase();
+    }
+    return "U";
+  };
 
   return (
-    <nav className="bg-white shadow-md z-50">
-      <div className="container mx-auto flex items-center justify-between py-4 px-4 relative">
-        {/* Home Button for AMS */}
-        <Link to="/" className="group flex items-center space-x-2 select-none">
-          <span
-            className="
-              bg-umat-yellow
-              text-umat-green
-              font-extrabold
-              text-xl
-              px-5 py-2
-              rounded-full
-              shadow
-              transition
-              duration-150
-              ease-in-out
-              cursor-pointer
-              border-2 border-umat-yellow
-              hover:border-umat-green
-              hover:bg-yellow-300
-              hover:shadow-lg
-              group-hover:scale-105
-              focus:outline-none
-              focus:ring-2 focus:ring-umat-green
-              flex items-center
-            "
-            title="Go to Home"
-            tabIndex={0}
-            role="button"
-            aria-label="Go to Home"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="inline mr-2 mb-1"
-              width="20"
-              height="20"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-              style={{ verticalAlign: "middle" }}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-8 9 8M4 10v10a1 1 0 001 1h3m10-11v10a1 1 0 01-1 1h-3m-6 0h6" />
-            </svg>
-            AMS
-          </span>
-        </Link>
+    <nav
+      className={`fixed w-full z-50 transition-all duration-300 ${
+        isScrolled
+          ? "bg-white shadow-md py-2"
+          : "bg-transparent py-4"
+      }`}
+    >
+      <div className="container mx-auto px-4 flex justify-between items-center">
+        {/* Logo */}
+        <DepartmentLogo isScrolled={isScrolled} />
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center space-x-8">
-          <Link to="/" className={`nav-link${location.pathname === "/" ? " font-bold text-umat-green" : ""}`}>
-            Home
-          </Link>
-          <Link to="/about" className={`nav-link${location.pathname.startsWith("/about") ? " font-bold text-umat-green" : ""}`}>
-            About
-          </Link>
-          <Link to="/news" className={`nav-link${location.pathname.startsWith("/news") ? " font-bold text-umat-green" : ""}`}>
-            News
-          </Link>
-          <Link to="/contact" className={`nav-link${location.pathname.startsWith("/contact") ? " font-bold text-umat-green" : ""}`}>
-            Contact
-          </Link>
-          {user && profile?.role === "admin" && (
-            <Link to="/admin" className={`nav-link${location.pathname.startsWith("/admin") ? " font-bold text-umat-green" : ""}`}>
-              Admin
+        <div className="hidden md:flex items-center space-x-1">
+          {navLinks.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                location.pathname === link.path
+                  ? isScrolled
+                    ? "bg-umat-green/10 text-umat-green"
+                    : "bg-white/20 text-white"
+                  : isScrolled
+                  ? "text-gray-700 hover:bg-gray-100"
+                  : "text-white/90 hover:bg-white/10 hover:text-white"
+              } transition-colors`}
+            >
+              {link.name}
             </Link>
-          )}
+          ))}
+          
           {user ? (
-            <Link to="/profile" className="nav-link">
-              Profile
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    {profile?.avatar_url ? (
+                      <AvatarImage src={profile.avatar_url} alt={getUserDisplayName()} />
+                    ) : (
+                      <AvatarFallback className="bg-umat-green text-white">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>{getUserDisplayName()}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Profile</DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/chat" className="flex items-center gap-2 cursor-pointer">
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Chat</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>Log out</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
-            <Link to="/auth" className="nav-link">
-              Login
+            <Link to="/auth">
+              <Button 
+                variant={isScrolled ? "default" : "outline"} 
+                className={isScrolled ? "bg-umat-green hover:bg-umat-green/90" : "border-white text-black hover:bg-white/20"}
+              >
+                Sign In
+              </Button>
             </Link>
           )}
         </div>
 
         {/* Mobile menu button */}
         <button
-          className="md:hidden p-2 rounded focus:outline-none focus:ring-2 focus:ring-umat-green"
-          onClick={() => setMobileMenuOpen((open) => !open)}
-          aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="md:hidden p-2 rounded-md focus:outline-none"
         >
-          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <div className="absolute top-full left-0 w-full bg-white shadow-lg flex flex-col items-start py-4 px-6 space-y-4 md:hidden z-50">
-            <Link to="/" className="nav-link w-full" onClick={() => setMobileMenuOpen(false)}>
-              Home
-            </Link>
-            <Link to="/about" className="nav-link w-full" onClick={() => setMobileMenuOpen(false)}>
-              About
-            </Link>
-            <Link to="/news" className="nav-link w-full" onClick={() => setMobileMenuOpen(false)}>
-              News
-            </Link>
-            <Link to="/contact" className="nav-link w-full" onClick={() => setMobileMenuOpen(false)}>
-              Contact
-            </Link>
-            {user && profile?.role === "admin" && (
-              <Link to="/admin" className="nav-link w-full" onClick={() => setMobileMenuOpen(false)}>
-                Admin
-              </Link>
-            )}
-            {user ? (
-              <Link to="/profile" className="nav-link w-full" onClick={() => setMobileMenuOpen(false)}>
-                Profile
-              </Link>
+          <svg
+            className={`w-6 h-6 ${isScrolled ? "text-gray-900" : "text-white"}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {isMobileMenuOpen ? (
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             ) : (
-              <Link to="/auth" className="nav-link w-full" onClick={() => setMobileMenuOpen(false)}>
-                Login
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            )}
+          </svg>
+        </button>
+      </div>
+
+      {/* Mobile Navigation */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden bg-white shadow-lg">
+          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                  location.pathname === link.path
+                    ? "bg-umat-green/10 text-umat-green"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                {link.name}
+              </Link>
+            ))}
+            {user ? (
+              <>
+                <div className="px-3 py-2 text-sm font-medium text-gray-500">
+                  Signed in as: {getUserDisplayName()}
+                </div>
+                <Link
+                  to="/chat"
+                  className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Chat</span>
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-500 hover:bg-red-50"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/auth"
+                className="block px-3 py-2 rounded-md text-base font-medium bg-umat-green text-white"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Sign In
               </Link>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </nav>
   );
 };
