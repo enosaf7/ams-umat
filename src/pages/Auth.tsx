@@ -58,7 +58,7 @@ const Auth = () => {
     }
 
     setLoading(false);
-    navigate("/dashboard");
+    navigate("/"); // Go to home after sign up
   };
 
   // Handles sign in
@@ -84,7 +84,7 @@ const Auth = () => {
       return;
     }
     setLoading(false);
-    navigate("/dashboard");
+    navigate("/"); // Go to home after sign in
   };
 
   return (
