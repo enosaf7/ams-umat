@@ -21,15 +21,22 @@ type ContactMessage = {
 const ContactMessagesManagement = () => {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchMessages = async () => {
       setLoading(true);
+      setError(null);
       const { data, error } = await supabase
         .from("contact_messages")
         .select("*")
         .order("created_at", { ascending: false });
-      if (!error && data) setMessages(data as ContactMessage[]);
+      if (error) {
+        setError(error.message);
+        setMessages([]);
+      } else if (data) {
+        setMessages(data as ContactMessage[]);
+      }
       setLoading(false);
     };
     fetchMessages();
@@ -40,6 +47,10 @@ const ContactMessagesManagement = () => {
       <h2 className="text-xl font-bold mb-4">Contact Messages</h2>
       {loading ? (
         <div>Loading messages...</div>
+      ) : error ? (
+        <div className="bg-red-100 text-red-700 border border-red-300 p-4 rounded mb-4">
+          <strong>Error loading messages:</strong> {error}
+        </div>
       ) : messages.length === 0 ? (
         <div>No contact messages yet.</div>
       ) : (
