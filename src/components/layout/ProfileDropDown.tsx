@@ -19,7 +19,9 @@ const ProfileDropdown = () => {
           className="w-8 h-8 rounded-full object-cover border"
         />
       </button>
-      {/* ...other dropdown items if any */}
+      <div className="mt-2">
+        <span>{profile?.first_name || "User"}</span>
+      </div>
     </div>
   );
 };
