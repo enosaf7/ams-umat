@@ -10,23 +10,25 @@ const Profile = () => {
   const { user, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
 
+  const [firstName, setFirstName] = useState<string>(profile?.first_name || "");
+  const [lastName, setLastName] = useState<string>(profile?.last_name || "");
   const [avatarUrl, setAvatarUrl] = useState<string>(profile?.avatar_url || "");
   const [about, setAbout] = useState<string>(profile?.about || "");
   const [linkedin, setLinkedin] = useState<string>(profile?.linkedin || "");
   const [portfolio, setPortfolio] = useState<string>(profile?.portfolio || "");
   const [cvUrl, setCvUrl] = useState<string>(profile?.cv_url || "");
-  const [name, setName] = useState<string>(profile?.name || "");
   const [email, setEmail] = useState<string>(profile?.email || "");
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
   useEffect(() => {
     if (profile) {
+      setFirstName(profile.first_name || "");
+      setLastName(profile.last_name || "");
       setAvatarUrl(profile.avatar_url || "");
       setAbout(profile.about || "");
       setLinkedin(profile.linkedin || "");
       setPortfolio(profile.portfolio || "");
       setCvUrl(profile.cv_url || "");
-      setName(profile.name || "");
       setEmail(profile.email || "");
     }
   }, [profile]);
@@ -48,7 +50,6 @@ const Profile = () => {
     const { publicURL } = supabase.storage.from("avatars").getPublicUrl(filePath).data;
     setAvatarUrl(publicURL);
 
-    // Optionally update profile immediately
     await supabase.from("profiles").update({ avatar_url: publicURL }).eq("id", user.id);
     await refreshProfile();
     toast({ title: "Profile Picture Updated" });
@@ -71,7 +72,6 @@ const Profile = () => {
     const { publicURL } = supabase.storage.from("cvs").getPublicUrl(filePath).data;
     setCvUrl(publicURL);
 
-    // Optionally update profile immediately
     await supabase.from("profiles").update({ cv_url: publicURL }).eq("id", user.id);
     await refreshProfile();
     toast({ title: "CV/Resume Uploaded" });
@@ -81,7 +81,8 @@ const Profile = () => {
     e.preventDefault();
     setIsSaving(true);
     const update = {
-      name,
+      first_name: firstName,
+      last_name: lastName,
       email,
       about,
       linkedin,
@@ -115,8 +116,12 @@ const Profile = () => {
           </div>
         </div>
         <div>
-          <Label>Name</Label>
-          <Input value={name} onChange={e => setName(e.target.value)} required />
+          <Label>First Name</Label>
+          <Input value={firstName} onChange={e => setFirstName(e.target.value)} required />
+        </div>
+        <div>
+          <Label>Last Name</Label>
+          <Input value={lastName} onChange={e => setLastName(e.target.value)} required />
         </div>
         <div>
           <Label>Email</Label>
