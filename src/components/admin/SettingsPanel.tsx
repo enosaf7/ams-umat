@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -76,21 +77,37 @@ const SettingsPanel = () => {
   const downloadDatabaseCSV = async () => {
     setIsDownloading(true);
     try {
-      // Adjust below: list all your table names to export
-      const tableNames = ["users", "news", "student_leaders", "site_settings"];
+      // Define table names with proper typing
+      const tables = [
+        { name: "profiles", table: "profiles" as const },
+        { name: "news", table: "news" as const },
+        { name: "student_leaders", table: "student_leaders" as const },
+        { name: "site_settings", table: "site_settings" as const },
+        { name: "contact_messages", table: "contact_messages" as const },
+        { name: "courses", table: "courses" as const },
+      ];
+      
       let csvData = "";
 
-      for (const table of tableNames) {
-        const { data, error } = await supabase.from(table).select("*");
-        if (error) throw error;
-        if (data && data.length > 0) {
-          // Generate CSV for this table
-          const keys = Object.keys(data[0]);
-          csvData += `\n\nTable: ${table}\n`;
-          csvData += keys.join(",") + "\n";
-          data.forEach(row => {
-            csvData += keys.map(k => JSON.stringify(row[k] ?? "")).join(",") + "\n";
-          });
+      for (const { name, table } of tables) {
+        try {
+          const { data, error } = await supabase.from(table).select("*");
+          if (error) {
+            console.error(`Error fetching ${name}:`, error);
+            continue;
+          }
+          if (data && data.length > 0) {
+            // Generate CSV for this table
+            const keys = Object.keys(data[0]);
+            csvData += `\n\nTable: ${name}\n`;
+            csvData += keys.join(",") + "\n";
+            data.forEach(row => {
+              csvData += keys.map(k => JSON.stringify(row[k] ?? "")).join(",") + "\n";
+            });
+          }
+        } catch (tableError) {
+          console.error(`Error processing table ${name}:`, tableError);
+          continue;
         }
       }
 
