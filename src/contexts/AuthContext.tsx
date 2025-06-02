@@ -10,12 +10,15 @@ interface UserProfile {
   first_name: string | null;
   last_name: string | null;
   role: string | null;
+  index_number: string | null;
+  class: string | null;
 }
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: UserProfile | null;
+  setProfile: (profile: UserProfile | null) => void;
   signOut: () => Promise<void>;
   isLoading: boolean;
   refreshProfile: () => Promise<void>;
@@ -108,6 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     user,
     profile,
+    setProfile,
     signOut,
     isLoading,
     refreshProfile,

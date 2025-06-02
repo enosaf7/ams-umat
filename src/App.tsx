@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
-import Layout from "@/components/layout/Layout";
 import MainRouter from "@/MainRouter";
 import "./App.css";
 
@@ -18,9 +17,7 @@ function App() {
         <BrowserRouter>
           <AuthProvider>
             <SettingsProvider>
-              <Layout>
-                <MainRouter />
-              </Layout>
+              <MainRouter />
               <Toaster />
             </SettingsProvider>
           </AuthProvider>
