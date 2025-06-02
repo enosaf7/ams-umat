@@ -1,8 +1,9 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
-const ProfileDropdown = () => {
+const ProfileDropDown = () => {
   const { profile } = useAuth();
   const navigate = useNavigate();
 
@@ -26,4 +27,4 @@ const ProfileDropdown = () => {
   );
 };
 
-export default ProfileDropdown;
+export default ProfileDropDown;
