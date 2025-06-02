@@ -1,3 +1,4 @@
+
 import React from "react";
 import Navbar from "@/components/layout/Navbar";
 
@@ -15,4 +16,4 @@ const Layout: React.FC<Props> = ({ children }) => (
   </>
 );
 
-export { Layout };
+export default Layout;
