@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import ChatSidebar from "@/components/chat/ChatSidebar";
 import ChatWindow from "@/components/chat/ChatWindow";
-import { Layout } from "@/components/layout/Layout";
+import Layout from "@/components/layout/Layout";
 import AvatarWithBadge from "@/components/common/AvatarWithBadge";
 
 export type ChatContact = {
@@ -39,7 +40,7 @@ export type ChatMessage = {
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 const Chat = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
   const [contacts, setContacts] = useState<ChatContact[]>([]);
   const [selectedContact, setSelectedContact] = useState<ChatContact | null>(null);
@@ -200,14 +201,7 @@ const Chat = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("chat_messages")
-        .select(
-          `
-            *,
-            sender:profiles!chat_messages_sender_id_fkey (
-              id, first_name, last_name, avatar_url
-            )
-          `
-        )
+        .select("*")
         .or(
           `and(sender_id.eq.${user?.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${user?.id})`
         )
@@ -334,21 +328,17 @@ const Chat = () => {
     markMessagesAsRead(contact.id);
   };
 
-  // Example: use AvatarWithBadge for the user's avatar in the header (adjust as needed)
-  // Replace your current avatar code with this wherever you display the user's profile picture
-  // <AvatarWithBadge src={user.avatar_url || "/default-avatar.png"} size={40} alt={user.username} unreadCount={myUnreadCount} />
-
   return (
     <Layout>
       {/* Example usage in top bar - adjust location as needed */}
       <div className="flex items-center p-2 border-b bg-white">
         <AvatarWithBadge
-          src={user?.avatar_url || "/default-avatar.png"}
+          src={profile?.avatar_url || "/default-avatar.png"}
           size={40}
-          alt={user?.username || "My profile"}
+          alt={profile?.username || "My profile"}
           unreadCount={myUnreadCount}
         />
-        <span className="ml-2 font-bold">{user?.username}</span>
+        <span className="ml-2 font-bold">{profile?.username}</span>
       </div>
       <div className="flex h-[80vh] w-full relative">
         {/* Sidebar */}
